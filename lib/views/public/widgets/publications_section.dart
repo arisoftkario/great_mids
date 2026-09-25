@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+
 import '../../../core/theme/app_theme.dart';
 import '../../../models/publication_model.dart';
 import '../../../services/app_data_service.dart';
@@ -90,12 +91,18 @@ class _PublicationsSectionState extends State<PublicationsSection> {
                             selected: isSelected,
                             selectedColor: AppTheme.primaryNavy,
                             labelStyle: TextStyle(
-                              color: isSelected ? Colors.white : AppTheme.textPrimary,
+                              color: isSelected
+                                  ? Colors.white
+                                  : AppTheme.textPrimary,
                               fontWeight: FontWeight.w700,
                               fontSize: 13,
                             ),
                             backgroundColor: Colors.white,
-                            side: BorderSide(color: isSelected ? AppTheme.primaryNavy : AppTheme.borderSubtle),
+                            side: BorderSide(
+                              color: isSelected
+                                  ? AppTheme.primaryNavy
+                                  : AppTheme.borderSubtle,
+                            ),
                             onSelected: (selected) {
                               if (selected) {
                                 setState(() => _selectedCategory = cat);
@@ -120,11 +127,19 @@ class _PublicationsSectionState extends State<PublicationsSection> {
                       ),
                       child: const Column(
                         children: [
-                          Icon(Icons.newspaper_rounded, size: 48, color: AppTheme.textSecondary),
+                          Icon(
+                            Icons.newspaper_rounded,
+                            size: 48,
+                            color: AppTheme.textSecondary,
+                          ),
                           SizedBox(height: 12),
                           Text(
                             'Aucune publication dans cette catégorie',
-                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: AppTheme.textPrimary),
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                              color: AppTheme.textPrimary,
+                            ),
                           ),
                         ],
                       ),
@@ -135,7 +150,9 @@ class _PublicationsSectionState extends State<PublicationsSection> {
                         final isCompact = constraints.maxWidth < 780;
                         final isMedium = constraints.maxWidth < 1100;
                         final columns = isCompact ? 1 : (isMedium ? 2 : 3);
-                        final itemWidth = (constraints.maxWidth - (18 * (columns - 1))) / columns;
+                        final itemWidth =
+                            (constraints.maxWidth - (18 * (columns - 1))) /
+                            columns;
 
                         return Wrap(
                           spacing: 18,
@@ -159,7 +176,10 @@ class _PublicationsSectionState extends State<PublicationsSection> {
   }
 
   Widget _buildPublicationCard(Publication pub) {
-    final dateStr = DateFormat('dd MMM yyyy', 'fr_FR').format(pub.publishedDate);
+    final dateStr = DateFormat(
+      'dd MMM yyyy',
+      'fr_FR',
+    ).format(pub.publishedDate);
 
     return Container(
       decoration: BoxDecoration(
@@ -183,16 +203,20 @@ class _PublicationsSectionState extends State<PublicationsSection> {
             SizedBox(
               height: 170,
               width: double.infinity,
-              child: pub.imageUrl!.startsWith('http://') || pub.imageUrl!.startsWith('https://')
+              child:
+                  pub.imageUrl!.startsWith('http://') ||
+                      pub.imageUrl!.startsWith('https://')
                   ? Image.network(
                       pub.imageUrl!,
                       fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) => _buildCardImagePlaceholder(pub),
+                      errorBuilder: (context, error, stackTrace) =>
+                          _buildCardImagePlaceholder(pub),
                     )
                   : Image.asset(
                       pub.imageUrl!,
                       fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) => _buildCardImagePlaceholder(pub),
+                      errorBuilder: (context, error, stackTrace) =>
+                          _buildCardImagePlaceholder(pub),
                     ),
             )
           else
@@ -206,7 +230,10 @@ class _PublicationsSectionState extends State<PublicationsSection> {
                 Row(
                   children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 4,
+                      ),
                       decoration: BoxDecoration(
                         color: AppTheme.accentBlue.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(6),
@@ -223,7 +250,10 @@ class _PublicationsSectionState extends State<PublicationsSection> {
                     const Spacer(),
                     Text(
                       dateStr,
-                      style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12),
+                      style: const TextStyle(
+                        color: AppTheme.textSecondary,
+                        fontSize: 12,
+                      ),
                     ),
                   ],
                 ),
@@ -253,12 +283,20 @@ class _PublicationsSectionState extends State<PublicationsSection> {
                 const SizedBox(height: 20),
                 Row(
                   children: [
-                    const Icon(Icons.person_outline_rounded, size: 15, color: AppTheme.textSecondary),
+                    const Icon(
+                      Icons.person_outline_rounded,
+                      size: 15,
+                      color: AppTheme.textSecondary,
+                    ),
                     const SizedBox(width: 6),
                     Expanded(
                       child: Text(
                         pub.author,
-                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppTheme.textSecondary),
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: AppTheme.textSecondary,
+                        ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -269,7 +307,10 @@ class _PublicationsSectionState extends State<PublicationsSection> {
                       label: const Text('Lire l’article'),
                       style: TextButton.styleFrom(
                         foregroundColor: AppTheme.accentBlue,
-                        textStyle: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13),
+                        textStyle: const TextStyle(
+                          fontWeight: FontWeight.w800,
+                          fontSize: 13,
+                        ),
                       ),
                     ),
                   ],

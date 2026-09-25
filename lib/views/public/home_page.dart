@@ -6,6 +6,8 @@ import '../../services/app_data_service.dart';
 import '../../services/auth_service.dart';
 import '../admin/admin_dashboard_view.dart';
 import '../admin/admin_login_view.dart';
+import '../../models/offer_model.dart';
+import 'widgets/offer_detail_dialog.dart';
 import 'widgets/offers_section.dart';
 import 'widgets/publications_section.dart';
 
@@ -1099,6 +1101,102 @@ class _DepartmentPage extends StatelessWidget {
                   ),
                 ),
               ),
+              // Dynamic Products & Opportunities Section for this department
+              ListenableBuilder(
+                listenable: AppDataService(),
+                builder: (context, _) {
+                  final offers = AppDataService().activeOffers.where((offer) {
+                    final dept = offer.department.toLowerCase();
+                    final actId = activity.id.toLowerCase();
+                    if (actId == 'parfum') return dept.contains('parfum');
+                    if (actId == 'texa') return dept.contains('texa') || dept.contains('visa') || dept.contains('passeport');
+                    if (actId == 'autosolution') return dept.contains('auto');
+                    if (actId == 'fondation') return dept.contains('fondation');
+                    if (actId == 'emploi') return dept.contains('emploi') || dept.contains('formation');
+                    return dept.contains(actId) || activity.title.toLowerCase().contains(dept);
+                  }).toList();
+
+                  if (offers.isEmpty) return const SizedBox.shrink();
+
+                  return Container(
+                    color: Colors.white,
+                    padding: const EdgeInsets.fromLTRB(24, 60, 24, 60),
+                    child: Center(
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 1100),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Text(
+                                      'PRODUITS & OPPORTUNITÉS DISPONIBLES',
+                                      style: TextStyle(
+                                        color: Color(0xFF1B7AE6),
+                                        fontWeight: FontWeight.w800,
+                                        letterSpacing: 1.8,
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      'Catalogue & offres de ${activity.title}',
+                                      style: const TextStyle(
+                                        color: Color(0xFF061A2E),
+                                        fontSize: 32,
+                                        fontWeight: FontWeight.w800,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF1B7AE6).withValues(alpha: 0.1),
+                                    borderRadius: BorderRadius.circular(20),
+                                  ),
+                                  child: Text(
+                                    '${offers.length} active(s)',
+                                    style: const TextStyle(
+                                      color: Color(0xFF1B7AE6),
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 13,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 28),
+                            LayoutBuilder(
+                              builder: (context, constraints) {
+                                final compact = constraints.maxWidth < 760;
+                                return Wrap(
+                                  spacing: 20,
+                                  runSpacing: 20,
+                                  children: offers.map((offer) {
+                                    return SizedBox(
+                                      width: compact ? double.infinity : (constraints.maxWidth - 20) / 2,
+                                      child: _DepartmentProductCard(
+                                        offer: offer,
+                                        activity: activity,
+                                      ),
+                                    );
+                                  }).toList(),
+                                );
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+
               Padding(
                 padding: const EdgeInsets.fromLTRB(24, 60, 24, 78),
                 child: Center(
@@ -1134,6 +1232,231 @@ class _DepartmentPage extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _DepartmentProductCard extends StatelessWidget {
+  const _DepartmentProductCard({
+    required this.offer,
+    required this.activity,
+  });
+
+  final Offer offer;
+  final BusinessActivity activity;
+
+  Future<void> _orderViaWhatsApp(BuildContext context) async {
+    final whatsAppNumber = offer.customContactWhatsApp ?? AppDataService().whatsAppNumber;
+    final message = 'Bonjour GREAT MINDS GROUP, je souhaite commander / souscrire à "${offer.title}" (${offer.department} - Réf: ${offer.id}).';
+    final uri = Uri.https('wa.me', '/$whatsAppNumber', {'text': message});
+    if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Impossible d’ouvrir WhatsApp. Contactez-nous au +$whatsAppNumber')),
+        );
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    Color typeBg = const Color(0xFFE8F1FF);
+    Color typeColor = const Color(0xFF1B7AE6);
+
+    switch (offer.type) {
+      case 'Promotion':
+        typeBg = const Color(0xFFFFF0F5);
+        typeColor = const Color(0xFFD63384);
+        break;
+      case 'Emploi':
+        typeBg = const Color(0xFFE6F8F2);
+        typeColor = const Color(0xFF0D9488);
+        break;
+      case 'Stage':
+        typeBg = const Color(0xFFFFF8E6);
+        typeColor = const Color(0xFFD97706);
+        break;
+      case 'Formation':
+        typeBg = const Color(0xFFF3E8FF);
+        typeColor = const Color(0xFF7C3AED);
+        break;
+      case 'Partenariat':
+        typeBg = const Color(0xFFECFDF5);
+        typeColor = const Color(0xFF059669);
+        break;
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(22),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFBFDFF),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFFD8E7F5)),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x08000000),
+            blurRadius: 12,
+            offset: Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: typeBg,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  offer.type.toUpperCase(),
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w800,
+                    color: typeColor,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+              ),
+              const Spacer(),
+              if (offer.isUrgent)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.red.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.bolt_rounded, size: 13, color: Colors.red),
+                      SizedBox(width: 3),
+                      Text(
+                        'VEDETTE',
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w800,
+                          color: Colors.red,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            offer.title,
+            style: const TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w800,
+              color: AppTheme.textPrimary,
+              height: 1.25,
+            ),
+          ),
+          if (offer.salaryOrPrice != null) ...[
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: const Color(0xFF59D6B6).withValues(alpha: 0.2),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                offer.salaryOrPrice!,
+                style: const TextStyle(
+                  color: Color(0xFF095A48),
+                  fontWeight: FontWeight.w800,
+                  fontSize: 13,
+                ),
+              ),
+            ),
+          ],
+          const SizedBox(height: 12),
+          Text(
+            offer.description,
+            maxLines: 3,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              fontSize: 13,
+              color: AppTheme.textSecondary,
+              height: 1.5,
+            ),
+          ),
+          const SizedBox(height: 14),
+          if (offer.requirements.isNotEmpty) ...[
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: offer.requirements.take(2).map((req) {
+                return Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF0F4F8),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.check_circle_rounded, size: 12, color: Color(0xFF1B7AE6)),
+                      const SizedBox(width: 4),
+                      Text(
+                        req.length > 35 ? '${req.substring(0, 32)}...' : req,
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: Color(0xFF4A657E),
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: 16),
+          ],
+          const Divider(height: 1, color: Color(0xFFE8EFF6)),
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () {
+                    showDialog<void>(
+                      context: context,
+                      builder: (context) => OfferDetailDialog(offer: offer),
+                    );
+                  },
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: const Color(0xFF061A2E),
+                    side: const BorderSide(color: Color(0xFFB5CDE4)),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                  child: const Text('Fiche détaillée', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: FilledButton.icon(
+                  onPressed: () => _orderViaWhatsApp(context),
+                  icon: const Icon(Icons.shopping_bag_rounded, size: 15),
+                  label: const Text('Commander', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: const Color(0xFF1B7AE6),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
