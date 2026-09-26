@@ -4,15 +4,15 @@ cd /d "%~dp0"
 
 echo ========================================================
 echo   DEPLOIEMENT FLUTTER WEB SUR GITHUB PAGES
-echo   DOMAINE: www.greatmindsgroupe.com
+echo   URL: https://arisoftkario.github.io/great_minds/
 echo ========================================================
 echo.
 
 :: Recuperer l'URL du remote git actuel
 for /f "tokens=*" %%a in ('git remote get-url origin') do set REMOTE_URL=%%a
 
-echo [1/4] Compilation du site Flutter Web pour domaine personnalise...
-call flutter build web --release --base-href "/"
+echo [1/3] Compilation du site Flutter Web pour great_minds...
+call flutter build web --release --base-href "/great_minds/"
 if errorlevel 1 (
     echo Erreur lors du build Flutter.
     pause
@@ -20,20 +20,20 @@ if errorlevel 1 (
 )
 
 echo.
-echo [2/4] Preparation des fichiers pour GitHub Pages (.nojekyll, 404.html, CNAME)...
+echo [2/3] Preparation des fichiers (.nojekyll et 404.html)...
 copy /Y "build\web\index.html" "build\web\404.html" >nul
 type nul > "build\web\.nojekyll"
-copy /Y "web\CNAME" "build\web\CNAME" >nul
+if exist "build\web\CNAME" del /f /q "build\web\CNAME"
 
 echo.
-echo [3/4] Publication sur la branche gh-pages de GitHub (%REMOTE_URL%)...
+echo [3/3] Publication sur la branche gh-pages de GitHub (%REMOTE_URL%)...
 cd build\web
 if exist ".git" (
     rmdir /s /q ".git"
 )
 git init -b gh-pages
 git add .
-git commit -m "Deploy site web to www.greatmindsgroupe.com"
+git commit -m "Deploy site web to https://arisoftkario.github.io/great_minds/"
 git remote add origin %REMOTE_URL%
 git push -f origin gh-pages
 
@@ -45,7 +45,7 @@ echo   SUCCES ! VOTRE SITE EST EN LIGNE
 echo ========================================================
 echo.
 echo Votre site sera accessible sur :
-echo   https://www.greatmindsgroupe.com
+echo   https://arisoftkario.github.io/great_minds/
 echo.
 echo ========================================================
 pause
