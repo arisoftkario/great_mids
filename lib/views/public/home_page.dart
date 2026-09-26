@@ -87,16 +87,22 @@ class _HomePageState extends State<HomePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppTheme.lightBg,
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => PwaInstallService.promptInstall(context),
-        backgroundColor: const Color(0xFFE5A93C),
-        foregroundColor: Colors.black,
-        elevation: 6,
-        icon: const Icon(Icons.install_mobile_rounded, size: 20),
-        label: const Text(
-          'Installer l\'App',
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-        ),
+      floatingActionButton: ValueListenableBuilder<bool>(
+        valueListenable: PwaInstallService.isInstalledNotifier,
+        builder: (context, isInstalled, child) {
+          if (isInstalled) return const SizedBox.shrink();
+          return FloatingActionButton.extended(
+            onPressed: () => PwaInstallService.promptInstall(context),
+            backgroundColor: const Color(0xFFE5A93C),
+            foregroundColor: Colors.black,
+            elevation: 6,
+            icon: const Icon(Icons.install_mobile_rounded, size: 20),
+            label: const Text(
+              'Installer l\'App',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+            ),
+          );
+        },
       ),
       body: SingleChildScrollView(
         controller: _scrollController,
@@ -369,18 +375,26 @@ class _Navigation extends StatelessWidget {
           ],
           const SizedBox(width: 8),
           // Install App Button
-          ElevatedButton.icon(
-            onPressed: () => PwaInstallService.promptInstall(context),
-            icon: const Icon(Icons.install_mobile_rounded, size: 16),
-            label: const Text('Installer l\'App', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFE5A93C),
-              foregroundColor: Colors.black,
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-            ),
+          ValueListenableBuilder<bool>(
+            valueListenable: PwaInstallService.isInstalledNotifier,
+            builder: (context, isInstalled, child) {
+              if (isInstalled) return const SizedBox.shrink();
+              return Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: ElevatedButton.icon(
+                  onPressed: () => PwaInstallService.promptInstall(context),
+                  icon: const Icon(Icons.install_mobile_rounded, size: 16),
+                  label: const Text('Installer l\'App', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFE5A93C),
+                    foregroundColor: Colors.black,
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                ),
+              );
+            },
           ),
-          const SizedBox(width: 8),
           // Admin Access Button
           IconButton(
             onPressed: onAdminPortal,
@@ -1808,15 +1822,23 @@ class _Footer extends StatelessWidget {
                 children: [
                   const _Brand(),
                   const Spacer(),
-                  TextButton.icon(
-                    onPressed: () => PwaInstallService.promptInstall(context),
-                    icon: const Icon(Icons.install_mobile_rounded, size: 16, color: Color(0xFFE5A93C)),
-                    label: const Text(
-                      'Installer l\'App',
-                      style: TextStyle(color: Color(0xFFE5A93C), fontWeight: FontWeight.w700),
-                    ),
+                  ValueListenableBuilder<bool>(
+                    valueListenable: PwaInstallService.isInstalledNotifier,
+                    builder: (context, isInstalled, child) {
+                      if (isInstalled) return const SizedBox.shrink();
+                      return Padding(
+                        padding: const EdgeInsets.only(right: 14),
+                        child: TextButton.icon(
+                          onPressed: () => PwaInstallService.promptInstall(context),
+                          icon: const Icon(Icons.install_mobile_rounded, size: 16, color: Color(0xFFE5A93C)),
+                          label: const Text(
+                            'Installer l\'App',
+                            style: TextStyle(color: Color(0xFFE5A93C), fontWeight: FontWeight.w700),
+                          ),
+                        ),
+                      );
+                    },
                   ),
-                  const SizedBox(width: 14),
                   TextButton.icon(
                     onPressed: onAdminPortal,
                     icon: const Icon(Icons.lock_outline_rounded, size: 16, color: Color(0xFF8FBCE4)),

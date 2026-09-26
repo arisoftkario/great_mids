@@ -44,16 +44,31 @@
     For more details:
     * https://docs.flutter.dev/platform-integration/web/initialization
   -->
-  <!-- Script d'installation PWA -->
+  <!-- Script d'installation PWA et détection mode autonome -->
   <script>
     window.deferredPWAInstallPrompt = null;
-    window.isPWAInstallAvailable = false;
+    window.isPWAInstalled = false;
+
+    function checkIsAppInstalled() {
+      return window.matchMedia('(display-mode: standalone)').matches ||
+             window.navigator.standalone === true ||
+             document.referrer.includes('android-app://') ||
+             window.isPWAInstalled === true;
+    }
+
+    window.isAppInstalled = checkIsAppInstalled;
 
     window.addEventListener('beforeinstallprompt', (e) => {
       e.preventDefault();
       window.deferredPWAInstallPrompt = e;
-      window.isPWAInstallAvailable = true;
       console.log('PWA installation disponible !');
+    });
+
+    window.addEventListener('appinstalled', (evt) => {
+      window.isPWAInstalled = true;
+      window.deferredPWAInstallPrompt = null;
+      console.log('Application GREAT MINDS installée avec succès !');
+      window.dispatchEvent(new CustomEvent('pwa-installed'));
     });
 
     window.triggerPWAInstall = function() {
@@ -61,10 +76,10 @@
         window.deferredPWAInstallPrompt.prompt();
         window.deferredPWAInstallPrompt.userChoice.then((choiceResult) => {
           if (choiceResult.outcome === 'accepted') {
-            console.log('Application GREAT MINDS installée avec succès !');
+            window.isPWAInstalled = true;
+            window.dispatchEvent(new CustomEvent('pwa-installed'));
           }
           window.deferredPWAInstallPrompt = null;
-          window.isPWAInstallAvailable = false;
         });
         return true;
       }

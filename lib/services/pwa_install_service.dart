@@ -5,12 +5,35 @@ import 'package:flutter/material.dart';
 @JS('triggerPWAInstall')
 external JSBoolean? _triggerPWAInstall();
 
+@JS('isAppInstalled')
+external JSBoolean? _isAppInstalled();
+
 class PwaInstallService {
+  static final ValueNotifier<bool> isInstalledNotifier =
+      ValueNotifier<bool>(_checkInitialInstalled());
+
+  static bool _checkInitialInstalled() {
+    if (kIsWeb) {
+      try {
+        return _isAppInstalled()?.toDart ?? false;
+      } catch (_) {
+        return false;
+      }
+    }
+    return false;
+  }
+
+  static void refreshStatus() {
+    isInstalledNotifier.value = _checkInitialInstalled();
+  }
+
   static void promptInstall(BuildContext context) {
     if (kIsWeb) {
       try {
         final result = _triggerPWAInstall()?.toDart;
-        if (result != true) {
+        if (result == true) {
+          isInstalledNotifier.value = true;
+        } else {
           showInstallInstructions(context);
         }
       } catch (_) {
