@@ -8,7 +8,7 @@ echo ========================================================
 echo.
 
 echo [1/4] Compilation du site Flutter Web...
-call flutter build web --release --base-href "/great_mids/"
+call flutter build web --release --base-href "/great_minds/"
 if errorlevel 1 (
     echo Erreur lors du build Flutter.
     pause
@@ -29,7 +29,7 @@ if exist ".git" (
 git init -b gh-pages
 git add .
 git commit -m "Deploy site web to GitHub Pages"
-git remote add origin https://github.com/arisoftkario/great_mids.git
+git remote add origin https://github.com/arisoftkario/great_minds.git
 git push -f origin gh-pages
 
 cd /d "%~dp0"
@@ -40,7 +40,7 @@ echo   SUCCES ! VOTRE SITE EST DEPLOYE SUR GITHUB PAGES
 echo ========================================================
 echo.
 echo Votre site sera en ligne dans quelques secondes a l'adresse :
-echo   https://arisoftkario.github.io/great_mids/
+echo   https://arisoftkario.github.io/great_minds/
 echo.
 echo ========================================================
 pause

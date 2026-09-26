@@ -33,7 +33,7 @@ jobs:
 
       - name: Build Flutter Web
         run: |
-          flutter build web --release --base-href "/great_mids/"
+          flutter build web --release --base-href "/great_minds/"
           cp build/web/index.html build/web/404.html
 
       - name: Upload Pages Artifact
