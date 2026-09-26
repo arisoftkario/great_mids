@@ -25,9 +25,19 @@ class _PublicationFormDialogState extends State<PublicationFormDialog> {
   late TextEditingController _urlInputController;
 
   String _selectedCategory = 'Actualité';
+  String _selectedDepartment = 'Toutes les activités';
   bool _isPublished = true;
   List<String> _images = [];
   bool _isLoadingImages = false;
+
+  final List<String> _departments = [
+    'Toutes les activités',
+    'GM Formation & Emploi',
+    'GM Parfum',
+    'GM Texa',
+    'GM Autosolution',
+    'GM Fondation',
+  ];
 
   final List<String> _categories = [
     'Actualité',
@@ -49,6 +59,7 @@ class _PublicationFormDialogState extends State<PublicationFormDialog> {
     _tagsController = TextEditingController(text: p?.tags.join(', ') ?? 'Formation, Emploi');
     _urlInputController = TextEditingController();
     _selectedCategory = p?.category ?? 'Actualité';
+    _selectedDepartment = p?.department ?? 'Toutes les activités';
     _isPublished = p?.isPublished ?? true;
     _images = List<String>.from(p?.allImages ?? []);
   }
@@ -141,6 +152,7 @@ class _PublicationFormDialogState extends State<PublicationFormDialog> {
         id: widget.publication?.id ?? 'pub_${DateTime.now().millisecondsSinceEpoch}',
         title: _titleController.text.trim(),
         category: _selectedCategory,
+        department: _selectedDepartment,
         summary: _summaryController.text.trim(),
         content: _contentController.text.trim(),
         author: _authorController.text.trim(),
@@ -226,9 +238,29 @@ class _PublicationFormDialogState extends State<PublicationFormDialog> {
                       ),
                       const SizedBox(height: 18),
 
-                      // Catégorie & Statut
+                      // Activité / Département & Catégorie
                       Row(
                         children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text('Activité / Département *', style: TextStyle(fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
+                                const SizedBox(height: 8),
+                                DropdownButtonFormField<String>(
+                                  initialValue: _departments.contains(_selectedDepartment) ? _selectedDepartment : _departments.first,
+                                  items: _departments.map((d) => DropdownMenuItem(value: d, child: Text(d, overflow: TextOverflow.ellipsis))).toList(),
+                                  onChanged: (val) {
+                                    if (val != null) setState(() => _selectedDepartment = val);
+                                  },
+                                  decoration: const InputDecoration(
+                                    prefixIcon: Icon(Icons.business_center_rounded, color: AppTheme.accentBlue, size: 20),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 16),
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
@@ -236,12 +268,37 @@ class _PublicationFormDialogState extends State<PublicationFormDialog> {
                                 const Text('Catégorie *', style: TextStyle(fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
                                 const SizedBox(height: 8),
                                 DropdownButtonFormField<String>(
-                                  initialValue: _selectedCategory,
+                                  initialValue: _categories.contains(_selectedCategory) ? _selectedCategory : _categories.first,
                                   items: _categories.map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
                                   onChanged: (val) {
                                     if (val != null) setState(() => _selectedCategory = val);
                                   },
-                                  decoration: const InputDecoration(),
+                                  decoration: const InputDecoration(
+                                    prefixIcon: Icon(Icons.category_rounded, color: AppTheme.accentCyan, size: 20),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 18),
+
+                      // Auteur & Statut de publication
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text('Auteur / Responsable', style: TextStyle(fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
+                                const SizedBox(height: 8),
+                                TextFormField(
+                                  controller: _authorController,
+                                  decoration: const InputDecoration(
+                                    hintText: 'Ex: Direction GM GROUP, Équipe GM Texa...',
+                                    prefixIcon: Icon(Icons.person_outline_rounded, size: 20),
+                                  ),
                                 ),
                               ],
                             ),
@@ -281,17 +338,6 @@ class _PublicationFormDialogState extends State<PublicationFormDialog> {
                             ),
                           ),
                         ],
-                      ),
-                      const SizedBox(height: 18),
-
-                      // Auteur
-                      const Text('Auteur / Département émetteur', style: TextStyle(fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
-                      const SizedBox(height: 8),
-                      TextFormField(
-                        controller: _authorController,
-                        decoration: const InputDecoration(
-                          hintText: 'Ex: Direction GM GROUP, Équipe GM Texa...',
-                        ),
                       ),
                       const SizedBox(height: 18),
 

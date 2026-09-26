@@ -21,18 +21,18 @@ class _OfferFormDialogState extends State<OfferFormDialog> {
   late TextEditingController _requirementsController;
   late TextEditingController _whatsAppController;
 
-  String _selectedDepartment = 'GM Formation & Emploi';
+  String _selectedDepartment = 'Formation & Emploi';
   String _selectedType = 'Emploi';
   DateTime _deadline = DateTime.now().add(const Duration(days: 30));
   bool _isActive = true;
   bool _isUrgent = false;
 
   final List<String> _departments = [
-    'GM Formation & Emploi',
-    'GM Parfum',
-    'GM Texa',
-    'GM Autosolution',
     'GM Fondation',
+    'GM autosolution',
+    'GM Pafum',
+    'GM texa',
+    'Formation & Emploi',
   ];
 
   final List<String> _types = [

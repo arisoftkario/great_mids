@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -16,12 +17,17 @@ class AppDataService extends ChangeNotifier {
   String _whatsAppNumber = AppConstants.whatsAppNumber;
   bool _isInitialized = false;
   DateTime? _lastSyncTime;
+  Timer? _autoSyncTimer;
+  bool _isAutoSyncEnabled = true;
+  bool _isSyncing = false;
 
   List<Publication> get publications => List.unmodifiable(_publications);
   List<Offer> get offers => List.unmodifiable(_offers);
   String get whatsAppNumber => _whatsAppNumber;
   bool get isInitialized => _isInitialized;
   DateTime? get lastSyncTime => _lastSyncTime;
+  bool get isAutoSyncEnabled => _isAutoSyncEnabled;
+  bool get isSyncing => _isSyncing;
 
   List<Publication> get publishedPublications =>
       _publications.where((p) => p.isPublished).toList()
@@ -65,6 +71,7 @@ class AppDataService extends ChangeNotifier {
 
       _isInitialized = true;
       _lastSyncTime = DateTime.now();
+      startAutoSync(); // Lance l'auto-synchronisation automatique toutes les 10 secondes
       notifyListeners();
     } catch (e) {
       debugPrint('Error loading AppDataService: $e');
@@ -72,42 +79,72 @@ class AppDataService extends ChangeNotifier {
       _offers = _getDefaultOffers();
       _isInitialized = true;
       _lastSyncTime = DateTime.now();
+      startAutoSync(); // Lance l'auto-synchronisation automatique toutes les 10 secondes
       notifyListeners();
     }
   }
 
-  /// Force la synchronisation et la sauvegarde globale des données
-  Future<void> syncData() async {
+  /// Démarre la recherche automatique des mises à jour toutes les 10 secondes
+  void startAutoSync({Duration interval = const Duration(seconds: 10)}) {
+    _autoSyncTimer?.cancel();
+    _isAutoSyncEnabled = true;
+    _autoSyncTimer = Timer.periodic(interval, (_) async {
+      await syncData(silent: true);
+    });
+  }
+
+  /// Arrête la recherche automatique des mises à jour
+  void stopAutoSync() {
+    _autoSyncTimer?.cancel();
+    _autoSyncTimer = null;
+    _isAutoSyncEnabled = false;
+  }
+
+  /// Force ou exécute la synchronisation et la sauvegarde globale des données
+  Future<void> syncData({bool silent = false}) async {
+    if (_isSyncing) return;
+    _isSyncing = true;
+    if (!silent) {
+      notifyListeners();
+    }
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.reload();
 
       // WhatsApp Number
-      _whatsAppNumber = prefs.getString(_whatsAppKey) ?? AppConstants.whatsAppNumber;
+      final newWhatsApp = prefs.getString(_whatsAppKey) ?? AppConstants.whatsAppNumber;
 
       // Publications
+      List<Publication> newPublications = _publications;
       final pubJson = prefs.getString(_publicationsKey);
       if (pubJson != null && pubJson.isNotEmpty) {
         final List<dynamic> decoded = jsonDecode(pubJson);
-        _publications = decoded.map((item) => Publication.fromJson(item)).toList();
+        newPublications = decoded.map((item) => Publication.fromJson(item)).toList();
       }
 
       // Offers
+      List<Offer> newOffers = _offers;
       final offerJson = prefs.getString(_offersKey);
       if (offerJson != null && offerJson.isNotEmpty) {
         final List<dynamic> decoded = jsonDecode(offerJson);
-        _offers = decoded.map((item) => Offer.fromJson(item)).toList();
+        newOffers = decoded.map((item) => Offer.fromJson(item)).toList();
       }
+
+      _whatsAppNumber = newWhatsApp;
+      _publications = newPublications;
+      _offers = newOffers;
 
       // Sauvegarde explicite pour persistance maximale
       await _savePublications();
       await _saveOffers();
 
       _lastSyncTime = DateTime.now();
+      _isSyncing = false;
       notifyListeners();
     } catch (e) {
       debugPrint('Error during syncData: $e');
       _lastSyncTime = DateTime.now();
+      _isSyncing = false;
       notifyListeners();
     }
   }
@@ -227,6 +264,7 @@ class AppDataService extends ChangeNotifier {
         id: 'pub_1',
         title: 'Lancement du Programme d’Accélération Professionnelle 2026',
         category: 'Actualité',
+        department: 'GM Formation & Emploi',
         summary: 'GREAT MINDS GROUP ouvre les candidatures pour son nouveau cycle intensif de formation et de placement pour 150 jeunes.',
         content: '''GREAT MINDS GROUP franchit une nouvelle étape dans son engagement pour l'employabilité des jeunes talents.\n\nCe programme intensif de 3 mois combine :\n• Des modules pratiques en compétences clés et leadership professionnel\n• Du coaching individuel avec des mentors issus du monde de l'entreprise\n• Un accompagnement sur-mesure pour l'accès à des stages et opportunités d'emploi.\n\nLes inscriptions sont ouvertes dès aujourd'hui. Contactez nos conseillers pour réserver votre place.''',
         author: 'Direction des Programmes GM',
@@ -240,6 +278,7 @@ class AppDataService extends ChangeNotifier {
         id: 'pub_2',
         title: 'GM Texa : Simplification des démarches Visa et Titres de Voyage',
         category: 'Conseil',
+        department: 'GM Texa',
         summary: 'Découvrez notre guide exclusif et notre service d’audit personnalisé pour optimiser vos dossiers de visa.',
         content: '''Préparer un voyage d'affaires, d'études ou de vacances nécessite une rigueur documentaire exemplaire.\n\nLe département GM Texa met à votre disposition un service d'accompagnement complet :\n1. Analyse préalable de l'éligibilité et audit des pièces justificatives\n2. Prise de rendez-vous et suivi des dossiers consulaires\n3. Conseils personnalisés pour maximiser les chances d'acceptation.\n\nPrenez contact avec nos experts pour un entretien préalable.''',
         author: 'Équipe GM Texa',
@@ -252,6 +291,7 @@ class AppDataService extends ChangeNotifier {
         id: 'pub_3',
         title: 'Arrivée de la Nouvelle Collection GM Parfum Prestige',
         category: 'Opportunité',
+        department: 'GM Parfum',
         summary: 'Une gamme de fragrances haut de gamme sélectionnées pour l’élégance quotidienne et les grandes occasions.',
         content: '''GM Parfum a le plaisir de dévoiler sa nouvelle sélection exclusive de fragrances raffinées.\n\nDisponibles dès maintenant en coffrets cadeaux et formats personnalisés avec livraison rapide.\nCommandez directement via notre service WhatsApp dédié pour bénéficier des tarifs préférentiels de lancement.''',
         author: 'Département GM Parfum',
@@ -265,6 +305,7 @@ class AppDataService extends ChangeNotifier {
         id: 'pub_4',
         title: 'Partenariat Stratégique avec les Acteurs Économiques Locaux',
         category: 'Communiqué',
+        department: 'Toutes les activités',
         summary: 'Signature de conventions pour faciliter l’intégration directe de nos diplômés au sein des entreprises partenaires.',
         content: '''Dans le cadre de son plan de développement, GREAT MINDS GROUP a officialisé 5 nouveaux partenariats avec des leaders industriels et commerciaux.\n\nCes accords prévoient l'accueil régulier de nos stagiaires et l'ouverture de postes dédiés pour les profils qualifiés formés par GM GROUP.''',
         author: 'Direction Générale',

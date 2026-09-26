@@ -2,6 +2,7 @@ class Publication {
   final String id;
   final String title;
   final String category; // 'Actualité', 'Événement', 'Opportunité', 'Conseil', 'Success Story'
+  final String department; // 'Toutes les activités', 'GM Formation & Emploi', 'GM Parfum', 'GM Texa', 'GM Autosolution', 'GM Fondation'
   final String summary;
   final String content;
   final String author;
@@ -16,6 +17,7 @@ class Publication {
     required this.id,
     required this.title,
     required this.category,
+    this.department = 'Toutes les activités',
     required this.summary,
     required this.content,
     required this.author,
@@ -45,6 +47,7 @@ class Publication {
     String? id,
     String? title,
     String? category,
+    String? department,
     String? summary,
     String? content,
     String? author,
@@ -59,6 +62,7 @@ class Publication {
       id: id ?? this.id,
       title: title ?? this.title,
       category: category ?? this.category,
+      department: department ?? this.department,
       summary: summary ?? this.summary,
       content: content ?? this.content,
       author: author ?? this.author,
@@ -76,6 +80,7 @@ class Publication {
       'id': id,
       'title': title,
       'category': category,
+      'department': department,
       'summary': summary,
       'content': content,
       'author': author,
@@ -104,6 +109,7 @@ class Publication {
       id: json['id'] as String,
       title: json['title'] as String,
       category: json['category'] as String? ?? 'Actualité',
+      department: json['department'] as String? ?? 'Toutes les activités',
       summary: json['summary'] as String? ?? '',
       content: json['content'] as String? ?? '',
       author: json['author'] as String? ?? 'Direction GM GROUP',

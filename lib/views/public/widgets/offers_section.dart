@@ -4,6 +4,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../models/offer_model.dart';
 import '../../../services/app_data_service.dart';
+import '../../../services/language_service.dart';
 import 'offer_detail_dialog.dart';
 
 class OffersSection extends StatefulWidget {
@@ -40,9 +41,10 @@ class _OffersSectionState extends State<OffersSection> {
   @override
   Widget build(BuildContext context) {
     final dataService = AppDataService();
+    final langService = LanguageService();
 
-    return AnimatedBuilder(
-      animation: dataService,
+    return ListenableBuilder(
+      listenable: Listenable.merge([dataService, langService]),
       builder: (context, _) {
         final allOffers = dataService.activeOffers;
         final filteredOffers = allOffers.where((o) {
@@ -64,9 +66,9 @@ class _OffersSectionState extends State<OffersSection> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // Header
-                  const Text(
-                    'OFFRES & OPPORTUNITÉS',
-                    style: TextStyle(
+                  Text(
+                    langService.t('offers_section_badge'),
+                    style: const TextStyle(
                       color: AppTheme.accentBlue,
                       fontSize: 12,
                       letterSpacing: 2,
@@ -74,9 +76,9 @@ class _OffersSectionState extends State<OffersSection> {
                     ),
                   ),
                   const SizedBox(height: 18),
-                  const Text(
-                    'Trouvez l’opportunité qui vous correspond.',
-                    style: TextStyle(
+                  Text(
+                    langService.t('offers_section_title'),
+                    style: const TextStyle(
                       color: AppTheme.textPrimary,
                       fontSize: 42,
                       fontWeight: FontWeight.w800,
@@ -84,9 +86,9 @@ class _OffersSectionState extends State<OffersSection> {
                     ),
                   ),
                   const SizedBox(height: 14),
-                  const Text(
-                    'Emplois, stages qualifiants, programmes de formation accélérés et offres exclusives issues de nos pôles d’activité.',
-                    style: TextStyle(
+                  Text(
+                    langService.t('offers_section_subtitle'),
+                    style: const TextStyle(
                       color: AppTheme.textSecondary,
                       fontSize: 16,
                       height: 1.6,
@@ -110,7 +112,10 @@ class _OffersSectionState extends State<OffersSection> {
                           scrollDirection: Axis.horizontal,
                           child: Row(
                             children: [
-                              const Text('Pôle / Univers : ', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: AppTheme.textSecondary)),
+                              Text(
+                                langService.t('offers_filter_pole'),
+                                style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: AppTheme.textSecondary),
+                              ),
                               const SizedBox(width: 8),
                               ...departments.map((dept) {
                                 final isSelected = _selectedDepartment == dept;
@@ -142,7 +147,10 @@ class _OffersSectionState extends State<OffersSection> {
                           scrollDirection: Axis.horizontal,
                           child: Row(
                             children: [
-                              const Text('Type d’opportunité : ', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: AppTheme.textSecondary)),
+                              Text(
+                                langService.t('offers_filter_type'),
+                                style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: AppTheme.textSecondary),
+                              ),
                               const SizedBox(width: 8),
                               ...types.map((t) {
                                 final isSelected = _selectedType == t;
@@ -183,18 +191,13 @@ class _OffersSectionState extends State<OffersSection> {
                         borderRadius: BorderRadius.circular(20),
                         border: Border.all(color: AppTheme.borderSubtle),
                       ),
-                      child: const Column(
+                      child: Column(
                         children: [
-                          Icon(Icons.work_off_rounded, size: 48, color: AppTheme.textSecondary),
-                          SizedBox(height: 12),
+                          const Icon(Icons.work_off_rounded, size: 48, color: AppTheme.textSecondary),
+                          const SizedBox(height: 12),
                           Text(
-                            'Aucune offre disponible dans ces critères',
-                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: AppTheme.textPrimary),
-                          ),
-                          SizedBox(height: 6),
-                          Text(
-                            'Revenez bientôt ou contactez-nous pour une candidature spontanée.',
-                            style: TextStyle(color: AppTheme.textSecondary, fontSize: 13),
+                            langService.t('offers_empty'),
+                            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: AppTheme.textPrimary),
                           ),
                         ],
                       ),
@@ -362,6 +365,7 @@ class _OffersSectionState extends State<OffersSection> {
   }
 
   Widget _buildOfferActions(Offer offer) {
+    final langService = LanguageService();
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -370,13 +374,13 @@ class _OffersSectionState extends State<OffersSection> {
           style: OutlinedButton.styleFrom(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           ),
-          child: const Text('Détails & Critères'),
+          child: Text(langService.t('offers_view_details')),
         ),
         const SizedBox(width: 10),
         FilledButton.icon(
           onPressed: () => _quickApplyWhatsApp(offer),
           icon: const Icon(Icons.chat_rounded, size: 16),
-          label: const Text('Postuler'),
+          label: Text(langService.t('offers_apply_whatsapp')),
           style: FilledButton.styleFrom(
             backgroundColor: AppTheme.primaryNavy,
             foregroundColor: Colors.white,

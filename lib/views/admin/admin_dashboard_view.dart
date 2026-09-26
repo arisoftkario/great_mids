@@ -20,6 +20,7 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
   final TextEditingController _searchPubController = TextEditingController();
   final TextEditingController _searchOfferController = TextEditingController();
   String _filterPubCategory = 'Tous';
+  String _filterPubDept = 'Tous';
   String _filterOfferDept = 'Tous';
   String _filterOfferType = 'Tous';
   bool _isSyncing = false;
@@ -216,7 +217,7 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
             ],
           ),
           const Spacer(),
-          // Bouton Synchroniser les mises à jour
+          // Bouton Synchroniser les mises à jour (Auto-synchro 10s active)
           FilledButton.icon(
             onPressed: _isSyncing ? null : _syncAllData,
             icon: _isSyncing
@@ -229,7 +230,7 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
             label: Text(
               _isSyncing
                   ? 'Synchronisation...'
-                  : (isDesktop ? 'Synchroniser les mises à jour' : 'Synchroniser'),
+                  : (isDesktop ? 'Synchroniser (Auto 10s actif)' : 'Sync (Auto 10s)'),
               style: const TextStyle(fontWeight: FontWeight.bold),
             ),
             style: FilledButton.styleFrom(
@@ -782,7 +783,8 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
           p.summary.toLowerCase().contains(query) ||
           p.author.toLowerCase().contains(query);
       final matchesCat = _filterPubCategory == 'Tous' || p.category == _filterPubCategory;
-      return matchesSearch && matchesCat;
+      final matchesDept = _filterPubDept == 'Tous' || p.department == _filterPubDept;
+      return matchesSearch && matchesCat && matchesDept;
     }).toList();
 
     return Column(
@@ -797,6 +799,7 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
             border: Border.all(color: AppTheme.borderSubtle),
           ),
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
                 children: [
@@ -824,12 +827,34 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
                 ],
               ),
               const SizedBox(height: 14),
+              // Department / Activity Filter chips
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: [
+                    const Text('Activité : ', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: AppTheme.textSecondary)),
+                    const SizedBox(width: 8),
+                    ...['Tous', 'Toutes les activités', 'GM Formation & Emploi', 'GM Parfum', 'GM Texa', 'GM Autosolution', 'GM Fondation'].map(
+                      (dept) => Padding(
+                        padding: const EdgeInsets.only(right: 6),
+                        child: FilterChip(
+                          selected: _filterPubDept == dept,
+                          label: Text(dept),
+                          selectedColor: AppTheme.accentCyan.withValues(alpha: 0.25),
+                          onSelected: (val) => setState(() => _filterPubDept = dept),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 10),
               // Category Filter chips
               SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
                 child: Row(
                   children: [
-                    const Text('Filtrer par catégorie : ', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: AppTheme.textSecondary)),
+                    const Text('Catégorie : ', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: AppTheme.textSecondary)),
                     const SizedBox(width: 8),
                     ...['Tous', 'Actualité', 'Événement', 'Opportunité', 'Conseil', 'Success Story', 'Communiqué'].map(
                       (cat) => Padding(
@@ -895,6 +920,26 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
+                  color: AppTheme.accentCyan.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: AppTheme.accentCyan.withValues(alpha: 0.3)),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.business_center_rounded, size: 13, color: Color(0xFF0C5645)),
+                    const SizedBox(width: 4),
+                    Text(
+                      p.department,
+                      style: const TextStyle(color: Color(0xFF0C5645), fontWeight: FontWeight.w700, fontSize: 11),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
                   color: AppTheme.accentBlue.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(8),
                 ),
@@ -903,7 +948,7 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
                   style: const TextStyle(color: AppTheme.accentBlue, fontWeight: FontWeight.w700, fontSize: 12),
                 ),
               ),
-              const SizedBox(width: 10),
+              const SizedBox(width: 8),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(

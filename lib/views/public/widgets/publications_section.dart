@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../models/publication_model.dart';
 import '../../../services/app_data_service.dart';
+import '../../../services/language_service.dart';
 import '../../common/app_image_viewer.dart';
 import 'publication_detail_dialog.dart';
 
@@ -16,6 +17,7 @@ class PublicationsSection extends StatefulWidget {
 
 class _PublicationsSectionState extends State<PublicationsSection> {
   String _selectedCategory = 'Tous';
+  String _selectedDepartment = 'Tous';
 
   void _openPublicationDetail(Publication pub) {
     AppDataService().incrementPublicationViews(pub.id);
@@ -28,14 +30,27 @@ class _PublicationsSectionState extends State<PublicationsSection> {
   @override
   Widget build(BuildContext context) {
     final dataService = AppDataService();
+    final langService = LanguageService();
 
-    return AnimatedBuilder(
-      animation: dataService,
+    return ListenableBuilder(
+      listenable: Listenable.merge([dataService, langService]),
       builder: (context, _) {
         final allPubs = dataService.publishedPublications;
-        final filteredPubs = _selectedCategory == 'Tous'
-            ? allPubs
-            : allPubs.where((p) => p.category == _selectedCategory).toList();
+        final filteredPubs = allPubs.where((p) {
+          final matchCat = _selectedCategory == 'Tous' || p.category == _selectedCategory;
+          final matchDept = _selectedDepartment == 'Tous' || p.department == _selectedDepartment;
+          return matchCat && matchDept;
+        }).toList();
+
+        final departments = [
+          'Tous',
+          'Toutes les activités',
+          'GM Formation & Emploi',
+          'GM Parfum',
+          'GM Texa',
+          'GM Autosolution',
+          'GM Fondation',
+        ];
 
         final categories = ['Tous', ...allPubs.map((p) => p.category).toSet()];
 
@@ -49,9 +64,9 @@ class _PublicationsSectionState extends State<PublicationsSection> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // Section Header
-                  const Text(
-                    'ACTUALITÉS & PUBLICATIONS',
-                    style: TextStyle(
+                  Text(
+                    langService.t('pubs_section_badge'),
+                    style: const TextStyle(
                       color: AppTheme.accentBlue,
                       fontSize: 12,
                       letterSpacing: 2,
@@ -59,9 +74,9 @@ class _PublicationsSectionState extends State<PublicationsSection> {
                     ),
                   ),
                   const SizedBox(height: 18),
-                  const Text(
-                    'Les nouvelles de l’écosystème GM GROUP.',
-                    style: TextStyle(
+                  Text(
+                    langService.t('pubs_section_title'),
+                    style: const TextStyle(
                       color: AppTheme.textPrimary,
                       fontSize: 42,
                       fontWeight: FontWeight.w800,
@@ -69,9 +84,9 @@ class _PublicationsSectionState extends State<PublicationsSection> {
                     ),
                   ),
                   const SizedBox(height: 14),
-                  const Text(
-                    'Découvrez nos derniers articles, annonces de programmes, conseils stratégiques et initiatives pour l’avenir.',
-                    style: TextStyle(
+                  Text(
+                    langService.t('pubs_section_subtitle'),
+                    style: const TextStyle(
                       color: AppTheme.textSecondary,
                       fontSize: 16,
                       height: 1.6,
@@ -79,16 +94,16 @@ class _PublicationsSectionState extends State<PublicationsSection> {
                   ),
                   const SizedBox(height: 32),
 
-                  // Category Filter Buttons
+                  // Department Filter Chips
                   SingleChildScrollView(
                     scrollDirection: Axis.horizontal,
                     child: Row(
-                      children: categories.map((cat) {
-                        final isSelected = _selectedCategory == cat;
+                      children: departments.map((dept) {
+                        final isSelected = _selectedDepartment == dept;
                         return Padding(
                           padding: const EdgeInsets.only(right: 8),
                           child: ChoiceChip(
-                            label: Text(cat),
+                            label: Text(dept),
                             selected: isSelected,
                             selectedColor: AppTheme.primaryNavy,
                             labelStyle: TextStyle(
@@ -103,6 +118,43 @@ class _PublicationsSectionState extends State<PublicationsSection> {
                               color: isSelected
                                   ? AppTheme.primaryNavy
                                   : AppTheme.borderSubtle,
+                            ),
+                            onSelected: (selected) {
+                              if (selected) {
+                                setState(() => _selectedDepartment = dept);
+                              }
+                            },
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Category Filter Buttons
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: categories.map((cat) {
+                        final isSelected = _selectedCategory == cat;
+                        return Padding(
+                          padding: const EdgeInsets.only(right: 8),
+                          child: ChoiceChip(
+                            label: Text(cat),
+                            selected: isSelected,
+                            selectedColor: AppTheme.accentBlue,
+                            labelStyle: TextStyle(
+                              color: isSelected
+                                  ? Colors.white
+                                  : AppTheme.textSecondary,
+                              fontWeight: FontWeight.w700,
+                              fontSize: 12,
+                            ),
+                            backgroundColor: const Color(0xFFEFF5FC),
+                            side: BorderSide(
+                              color: isSelected
+                                  ? AppTheme.accentBlue
+                                  : Colors.transparent,
                             ),
                             onSelected: (selected) {
                               if (selected) {
@@ -126,17 +178,17 @@ class _PublicationsSectionState extends State<PublicationsSection> {
                         borderRadius: BorderRadius.circular(20),
                         border: Border.all(color: AppTheme.borderSubtle),
                       ),
-                      child: const Column(
+                      child: Column(
                         children: [
-                          Icon(
+                          const Icon(
                             Icons.newspaper_rounded,
                             size: 48,
                             color: AppTheme.textSecondary,
                           ),
-                          SizedBox(height: 12),
+                          const SizedBox(height: 12),
                           Text(
-                            'Aucune publication dans cette catégorie',
-                            style: TextStyle(
+                            langService.t('pubs_empty'),
+                            style: const TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w700,
                               color: AppTheme.textPrimary,
@@ -246,7 +298,33 @@ class _PublicationsSectionState extends State<PublicationsSection> {
                   children: [
                     Container(
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppTheme.accentCyan.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.business_center_rounded, size: 12, color: Color(0xFF0C5645)),
+                          const SizedBox(width: 4),
+                          Text(
+                            pub.department,
+                            style: const TextStyle(
+                              color: Color(0xFF0C5645),
+                              fontSize: 10,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
                         vertical: 4,
                       ),
                       decoration: BoxDecoration(
@@ -257,7 +335,7 @@ class _PublicationsSectionState extends State<PublicationsSection> {
                         pub.category,
                         style: const TextStyle(
                           color: AppTheme.accentBlue,
-                          fontSize: 11,
+                          fontSize: 10,
                           fontWeight: FontWeight.w700,
                         ),
                       ),
@@ -267,7 +345,7 @@ class _PublicationsSectionState extends State<PublicationsSection> {
                       dateStr,
                       style: const TextStyle(
                         color: AppTheme.textSecondary,
-                        fontSize: 12,
+                        fontSize: 11,
                       ),
                     ),
                   ],
@@ -319,7 +397,7 @@ class _PublicationsSectionState extends State<PublicationsSection> {
                     TextButton.icon(
                       onPressed: () => _openPublicationDetail(pub),
                       icon: const Icon(Icons.arrow_forward_rounded, size: 16),
-                      label: const Text('Lire l’article'),
+                      label: Text(LanguageService().t('pubs_read_more')),
                       style: TextButton.styleFrom(
                         foregroundColor: AppTheme.accentBlue,
                         textStyle: const TextStyle(

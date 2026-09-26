@@ -63,9 +63,28 @@ class _PublicationDetailDialogState extends State<PublicationDetailDialog> {
                       color: AppTheme.accentCyan.withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(8),
                     ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.business_center_rounded, size: 14, color: AppTheme.accentCyan),
+                        const SizedBox(width: 6),
+                        Text(
+                          publication.department,
+                          style: const TextStyle(color: AppTheme.accentCyan, fontWeight: FontWeight.w800, fontSize: 12),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
                     child: Text(
                       publication.category,
-                      style: const TextStyle(color: AppTheme.accentCyan, fontWeight: FontWeight.w800, fontSize: 12),
+                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 12),
                     ),
                   ),
                   const Spacer(),

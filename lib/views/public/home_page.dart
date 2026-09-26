@@ -1,15 +1,20 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../core/theme/app_theme.dart';
 import '../../models/activity_model.dart';
+import '../../models/offer_model.dart';
+import '../../models/publication_model.dart';
 import '../../services/app_data_service.dart';
 import '../../services/auth_service.dart';
+import '../../services/language_service.dart';
+import '../../services/pwa_install_service.dart';
 import '../admin/admin_dashboard_view.dart';
 import '../admin/admin_login_view.dart';
-import '../../models/offer_model.dart';
-import '../../services/pwa_install_service.dart';
+import '../common/app_image_viewer.dart';
 import 'widgets/offer_detail_dialog.dart';
 import 'widgets/offers_section.dart';
+import 'widgets/publication_detail_dialog.dart';
 import 'widgets/publications_section.dart';
 
 class HomePage extends StatefulWidget {
@@ -77,6 +82,34 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+
+  void _handleNavigate(String section) {
+    switch (section) {
+      case 'home':
+        _scrollController.animateTo(0, duration: const Duration(milliseconds: 600), curve: Curves.easeOutCubic);
+        break;
+      case 'services':
+        _scrollToKey(_servicesKey);
+        break;
+      case 'univers':
+        _scrollToKey(_universKey);
+        break;
+      case 'offers':
+        _scrollToKey(_offersKey);
+        break;
+      case 'news':
+        _scrollToKey(_newsKey);
+        break;
+      case 'about':
+        _scrollToKey(_aboutKey);
+        break;
+      case 'method':
+        _scrollToKey(_methodKey);
+        break;
+    }
+  }
+
   @override
   void dispose() {
     _scrollController.dispose();
@@ -85,107 +118,98 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppTheme.lightBg,
-      floatingActionButton: ValueListenableBuilder<bool>(
-        valueListenable: PwaInstallService.isInstalledNotifier,
-        builder: (context, isInstalled, child) {
-          if (isInstalled) return const SizedBox.shrink();
-          return FloatingActionButton.extended(
-            onPressed: () => PwaInstallService.promptInstall(context),
-            backgroundColor: const Color(0xFFE5A93C),
-            foregroundColor: Colors.black,
-            elevation: 6,
-            icon: const Icon(Icons.install_mobile_rounded, size: 20),
-            label: const Text(
-              'Installer l\'App',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-            ),
-          );
-        },
-      ),
-      body: SingleChildScrollView(
-        controller: _scrollController,
-        child: Column(
-          children: [
-            // 1. Hero & Navigation
-            _HeroSection(
-              onExplore: () => _scrollToKey(_servicesKey),
-              onContact: _openWhatsApp,
-              onNavigate: (section) {
-                switch (section) {
-                  case 'services':
-                    _scrollToKey(_servicesKey);
-                    break;
-                  case 'univers':
-                    _scrollToKey(_universKey);
-                    break;
-                  case 'offers':
-                    _scrollToKey(_offersKey);
-                    break;
-                  case 'news':
-                    _scrollToKey(_newsKey);
-                    break;
-                  case 'about':
-                    _scrollToKey(_aboutKey);
-                    break;
-                  case 'method':
-                    _scrollToKey(_methodKey);
-                    break;
-                }
-              },
-              onAdminPortal: _openAdminPortal,
-            ),
-
-            // 2. Stats
-            const _StatsSection(),
-
-            // 3. Services
-            Container(key: _servicesKey, child: const _ServicesSection()),
-
-            // 4. Univers / Activities
-            Container(
-              key: _universKey,
-              child: _BusinessActivitiesSection(
-                onOrder: (activity) => _openWhatsApp(
-                  'Bonjour GREAT MINDS GROUP, je souhaite ${activity.requestMessage}.',
+    return ListenableBuilder(
+      listenable: LanguageService(),
+      builder: (context, _) {
+        return Scaffold(
+          key: _scaffoldKey,
+          drawer: _MobileDrawer(
+            onNavigate: _handleNavigate,
+            onContact: _openWhatsApp,
+            onAdminPortal: _openAdminPortal,
+          ),
+          backgroundColor: AppTheme.lightBg,
+          floatingActionButton: ValueListenableBuilder<bool>(
+            valueListenable: PwaInstallService.isInstalledNotifier,
+            builder: (context, isInstalled, child) {
+              if (isInstalled) return const SizedBox.shrink();
+              return FloatingActionButton.extended(
+                onPressed: () => PwaInstallService.promptInstall(context),
+                backgroundColor: const Color(0xFFE5A93C),
+                foregroundColor: Colors.black,
+                elevation: 6,
+                icon: const Icon(Icons.install_mobile_rounded, size: 20),
+                label: Text(
+                  LanguageService().t('nav_install'),
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
                 ),
-                onVisit: (activity) => Navigator.of(context).push(
-                  MaterialPageRoute<void>(
-                    builder: (context) => _DepartmentPage(
-                      activity: activity,
-                      onContact: () => _openWhatsApp(
-                        'Bonjour GREAT MINDS GROUP, je souhaite ${activity.requestMessage}.',
+              );
+            },
+          ),
+          body: SingleChildScrollView(
+            controller: _scrollController,
+            child: Column(
+              children: [
+                // 1. Hero & Navigation
+                _HeroSection(
+                  onExplore: () => _scrollToKey(_servicesKey),
+                  onContact: _openWhatsApp,
+                  onNavigate: _handleNavigate,
+                  onAdminPortal: _openAdminPortal,
+                  onOpenMenu: () => _scaffoldKey.currentState?.openDrawer(),
+                ),
+
+                // 2. Stats
+                const _StatsSection(),
+
+                // 3. Services
+                Container(key: _servicesKey, child: const _ServicesSection()),
+
+                // 4. Univers / Activities
+                Container(
+                  key: _universKey,
+                  child: _BusinessActivitiesSection(
+                    onOrder: (activity) => _openWhatsApp(
+                      'Bonjour GREAT MINDS GROUP, je souhaite ${activity.requestMessage}.',
+                    ),
+                    onVisit: (activity) => Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (context) => _DepartmentPage(
+                          activity: activity,
+                          onContact: () => _openWhatsApp(
+                            'Bonjour GREAT MINDS GROUP, je souhaite ${activity.requestMessage}.',
+                          ),
+                        ),
                       ),
                     ),
                   ),
                 ),
-              ),
+
+                // 5. Dynamic Offers Section
+                Container(key: _offersKey, child: const OffersSection()),
+
+                // 6. Dynamic Publications & News Section
+                Container(key: _newsKey, child: const PublicationsSection()),
+
+                // 7. About
+                Container(key: _aboutKey, child: const _AboutSection()),
+
+                // 8. Process / Method
+                Container(key: _methodKey, child: const _ProcessSection()),
+
+                // 9. CTA
+                _CTASection(onContact: _openWhatsApp),
+
+                // 10. Footer
+                _Footer(
+                  onContact: _openWhatsApp,
+                  onAdminPortal: _openAdminPortal,
+                ),
+              ],
             ),
-
-            // 5. Dynamic Offers Section
-            Container(key: _offersKey, child: const OffersSection()),
-
-            // 6. Dynamic Publications & News Section
-            Container(key: _newsKey, child: const PublicationsSection()),
-
-            // 7. About
-            Container(key: _aboutKey, child: const _AboutSection()),
-
-            // 8. Process / Method
-            Container(key: _methodKey, child: const _ProcessSection()),
-
-            // 9. CTA
-            _CTASection(onContact: _openWhatsApp),
-
-            // 10. Footer
-            _Footer(
-              onContact: _openWhatsApp,
-              onAdminPortal: _openAdminPortal,
-            ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 }
@@ -199,12 +223,14 @@ class _HeroSection extends StatelessWidget {
     required this.onContact,
     required this.onNavigate,
     required this.onAdminPortal,
+    this.onOpenMenu,
   });
 
   final VoidCallback onExplore;
   final VoidCallback onContact;
   final ValueChanged<String> onNavigate;
   final VoidCallback onAdminPortal;
+  final VoidCallback? onOpenMenu;
 
   @override
   Widget build(BuildContext context) {
@@ -228,6 +254,7 @@ class _HeroSection extends StatelessWidget {
                   onContact: onContact,
                   onNavigate: onNavigate,
                   onAdminPortal: onAdminPortal,
+                  onOpenMenu: onOpenMenu,
                 ),
               ),
               const SizedBox(height: 28),
@@ -307,9 +334,9 @@ class _HeroSection extends StatelessWidget {
     const SizedBox(height: 22),
     SizedBox(
       width: compact ? double.infinity : 480,
-      child: const Text(
-        'Des solutions concrètes pour la formation, l’insertion professionnelle, l’accompagnement et la création d’opportunités durables pour les jeunes et les organisations.',
-        style: TextStyle(color: Color(0xFFD7E7F7), fontSize: 17, height: 1.6),
+      child: Text(
+        LanguageService().t('hero_subtitle'),
+        style: const TextStyle(color: Color(0xFFD7E7F7), fontSize: 17, height: 1.6),
       ),
     ),
     const SizedBox(height: 28),
@@ -332,7 +359,7 @@ class _HeroSection extends StatelessWidget {
         FilledButton.icon(
           onPressed: onContact,
           icon: const Icon(Icons.chat_rounded, size: 18),
-          label: const Text('Écrire sur WhatsApp'),
+          label: Text(LanguageService().t('hero_btn_contact')),
           style: FilledButton.styleFrom(
             backgroundColor: const Color(0xFF59D6B6),
             foregroundColor: const Color(0xFF061A2E),
@@ -342,7 +369,7 @@ class _HeroSection extends StatelessWidget {
         OutlinedButton.icon(
           onPressed: onExplore,
           icon: const Icon(Icons.arrow_downward_rounded, size: 18),
-          label: const Text('Découvrir les offres'),
+          label: Text(LanguageService().t('hero_btn_offers')),
           style: OutlinedButton.styleFrom(
             foregroundColor: Colors.white,
             side: const BorderSide(color: Color(0xFFB7D9F1)),
@@ -359,11 +386,13 @@ class _Navigation extends StatelessWidget {
     required this.onContact,
     required this.onNavigate,
     required this.onAdminPortal,
+    this.onOpenMenu,
   });
 
   final VoidCallback onContact;
   final ValueChanged<String> onNavigate;
   final VoidCallback onAdminPortal;
+  final VoidCallback? onOpenMenu;
 
   @override
   Widget build(BuildContext context) {
@@ -377,13 +406,88 @@ class _Navigation extends StatelessWidget {
           const _Brand(),
           const Spacer(),
           if (!isMobile) ...[
-            TextButton(onPressed: () => onNavigate('services'), child: const Text('Services', style: TextStyle(color: Colors.white70))),
+            TextButton(onPressed: () => onNavigate('services'), child: Text(LanguageService().t('nav_activities'), style: const TextStyle(color: Colors.white70))),
             TextButton(onPressed: () => onNavigate('univers'), child: const Text('Univers GM', style: TextStyle(color: Colors.white70))),
-            TextButton(onPressed: () => onNavigate('offers'), child: const Text('Offres & Emploi', style: TextStyle(color: AppTheme.accentCyan, fontWeight: FontWeight.w700))),
-            TextButton(onPressed: () => onNavigate('news'), child: const Text('Actualités', style: TextStyle(color: Colors.white70))),
-            TextButton(onPressed: () => onNavigate('about'), child: const Text('À propos', style: TextStyle(color: Colors.white70))),
+            TextButton(onPressed: () => onNavigate('offers'), child: Text(LanguageService().t('nav_offers'), style: const TextStyle(color: AppTheme.accentCyan, fontWeight: FontWeight.w700))),
+            TextButton(onPressed: () => onNavigate('news'), child: Text(LanguageService().t('nav_publications'), style: const TextStyle(color: Colors.white70))),
+            TextButton(onPressed: () => onNavigate('about'), child: Text(LanguageService().t('nav_contact'), style: const TextStyle(color: Colors.white70))),
             const SizedBox(width: 8),
           ],
+          // Language Switcher Dropdown (Reactive)
+          ListenableBuilder(
+            listenable: LanguageService(),
+            builder: (context, _) {
+              final currentLang = LanguageService().currentLanguage;
+              final currentModel = LanguageService().currentLanguageModel;
+              return PopupMenuButton<String>(
+                tooltip: 'Changer de langue / Change Language',
+                onSelected: (String langCode) {
+                  LanguageService().setLanguage(langCode);
+                },
+                offset: const Offset(0, 48),
+                color: const Color(0xFF0D253A),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  side: BorderSide(color: Colors.white.withValues(alpha: 0.15)),
+                ),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF59D6B6).withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: const Color(0xFF59D6B6).withValues(alpha: 0.4)),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        currentModel.flag,
+                        style: const TextStyle(fontSize: 16),
+                      ),
+                      const SizedBox(width: 5),
+                      Text(
+                        currentLang.toUpperCase(),
+                        style: const TextStyle(
+                          color: Color(0xFF59D6B6),
+                          fontSize: 12,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                      const Icon(Icons.arrow_drop_down_rounded, color: Color(0xFF59D6B6), size: 18),
+                    ],
+                  ),
+                ),
+                itemBuilder: (BuildContext context) {
+                  return LanguageService().supportedLanguages.map((lang) {
+                    final isSelected = lang.code == currentLang;
+                    return PopupMenuItem<String>(
+                      value: lang.code,
+                      child: Row(
+                        children: [
+                          Text(lang.flag, style: const TextStyle(fontSize: 18)),
+                          const SizedBox(width: 10),
+                          Text(
+                            lang.name,
+                            style: TextStyle(
+                              color: isSelected ? const Color(0xFF59D6B6) : Colors.white,
+                              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                              fontSize: 13,
+                            ),
+                          ),
+                          if (isSelected) ...[
+                            const Spacer(),
+                            const Icon(Icons.check_rounded, color: Color(0xFF59D6B6), size: 16),
+                          ],
+                        ],
+                      ),
+                    );
+                  }).toList();
+                },
+              );
+            },
+          ),
+          const SizedBox(width: 6),
           // Install App Button
           ValueListenableBuilder<bool>(
             valueListenable: PwaInstallService.isInstalledNotifier,
@@ -394,7 +498,7 @@ class _Navigation extends StatelessWidget {
                 child: isMobile
                     ? IconButton(
                         onPressed: () => PwaInstallService.promptInstall(context),
-                        tooltip: 'Installer l\'Application',
+                        tooltip: LanguageService().t('nav_install'),
                         style: IconButton.styleFrom(
                           backgroundColor: const Color(0xFFE5A93C),
                           foregroundColor: Colors.black,
@@ -404,7 +508,7 @@ class _Navigation extends StatelessWidget {
                     : ElevatedButton.icon(
                         onPressed: () => PwaInstallService.promptInstall(context),
                         icon: const Icon(Icons.install_mobile_rounded, size: 16),
-                        label: const Text('Installer l\'App', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                        label: Text(LanguageService().t('nav_install'), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFFE5A93C),
                           foregroundColor: Colors.black,
@@ -415,32 +519,46 @@ class _Navigation extends StatelessWidget {
               );
             },
           ),
-          // Sync / Refresh Button
-          IconButton(
-            onPressed: () async {
-              await AppDataService().syncData();
-              if (context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('✓ Contenus et offres synchronisés !'),
-                    duration: Duration(seconds: 2),
-                    behavior: SnackBarBehavior.floating,
-                  ),
-                );
-              }
+          // Sync / Refresh Button (Auto-synchro 10s active)
+          ListenableBuilder(
+            listenable: AppDataService(),
+            builder: (context, _) {
+              final isSyncing = AppDataService().isSyncing;
+              return IconButton(
+                onPressed: () async {
+                  await AppDataService().syncData();
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(LanguageService().t('nav_sync_success')),
+                        duration: const Duration(seconds: 2),
+                        behavior: SnackBarBehavior.floating,
+                      ),
+                    );
+                  }
+                },
+                tooltip: LanguageService().t('nav_sync_tooltip'),
+                style: IconButton.styleFrom(
+                  backgroundColor: isSyncing 
+                      ? const Color(0xFF59D6B6).withValues(alpha: 0.2)
+                      : Colors.white.withValues(alpha: 0.08),
+                  foregroundColor: isSyncing ? const Color(0xFF59D6B6) : Colors.white70,
+                ),
+                icon: isSyncing
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF59D6B6)),
+                      )
+                    : const Icon(Icons.sync_rounded, size: 20),
+              );
             },
-            tooltip: 'Synchroniser / Actualiser les données',
-            style: IconButton.styleFrom(
-              backgroundColor: Colors.white.withValues(alpha: 0.08),
-              foregroundColor: Colors.white70,
-            ),
-            icon: const Icon(Icons.sync_rounded, size: 20),
           ),
           const SizedBox(width: 6),
           // Admin Access Button
           IconButton(
             onPressed: onAdminPortal,
-            tooltip: 'Espace Administrateur',
+            tooltip: LanguageService().t('nav_admin'),
             style: IconButton.styleFrom(
               backgroundColor: Colors.white.withValues(alpha: 0.1),
               foregroundColor: AppTheme.accentCyan,
@@ -467,8 +585,21 @@ class _Navigation extends StatelessWidget {
                 side: const BorderSide(color: Color(0xFF59D6B6)),
                 padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
               ),
-              child: const Text('Contact WhatsApp'),
+              child: Text(LanguageService().t('contact_btn_chat')),
             ),
+          // Hamburger Menu Button (Mobile & Tablet)
+          if (isMobile) ...[
+            const SizedBox(width: 6),
+            IconButton(
+              onPressed: onOpenMenu,
+              tooltip: 'Menu',
+              style: IconButton.styleFrom(
+                backgroundColor: const Color(0xFF59D6B6).withValues(alpha: 0.15),
+                foregroundColor: const Color(0xFF59D6B6),
+              ),
+              icon: const Icon(Icons.menu_rounded, size: 22),
+            ),
+          ],
         ],
       ),
     );
@@ -627,18 +758,30 @@ class _BusinessVisual extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: isCompact ? double.infinity : 340,
+      width: isCompact ? double.infinity : 360,
       constraints: const BoxConstraints(maxWidth: 420),
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(22),
       decoration: BoxDecoration(
-        color: const Color(0xFF153D61),
+        gradient: const LinearGradient(
+          colors: [Color(0xFF0D253A), Color(0xFF071828)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
         borderRadius: BorderRadius.circular(28),
-        border: Border.all(color: const Color(0xFF96CAEA), width: 1.5),
+        border: Border.all(
+          color: const Color(0xFF59D6B6).withValues(alpha: 0.35),
+          width: 1.5,
+        ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.25),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
+            color: const Color(0xFF59D6B6).withValues(alpha: 0.12),
+            blurRadius: 30,
+            offset: const Offset(0, 12),
+          ),
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.5),
+            blurRadius: 24,
+            offset: const Offset(0, 14),
           ),
         ],
       ),
@@ -646,61 +789,226 @@ class _BusinessVisual extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          // Top Visual Showcase Container
           Container(
-            height: isCompact ? 150 : 180,
+            height: isCompact ? 170 : 200,
+            padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
               gradient: const LinearGradient(
-                colors: [Color(0xFF59D6B6), Color(0xFF3A9BFF)],
+                colors: [Color(0xFF133B5C), Color(0xFF0A2238)],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
               borderRadius: BorderRadius.circular(22),
-            ),
-            child: const Center(
-              child: Icon(
-                Icons.insights_rounded,
-                size: 72,
-                color: Color(0xFF061A2E),
+              border: Border.all(
+                color: Colors.white.withValues(alpha: 0.12),
+                width: 1,
               ),
             ),
-          ),
-          const SizedBox(height: 18),
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.08),
-              borderRadius: BorderRadius.circular(18),
-            ),
-            child: const Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            child: Stack(
               children: [
-                Row(
-                  children: [
-                    Icon(Icons.auto_graph_rounded, color: Color(0xFF59D6B6), size: 18),
-                    SizedBox(width: 8),
-                    Text(
-                      'Vision & résultats',
-                      style: TextStyle(
-                        color: Color(0xFFF3F9FF),
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
+                // Background Ambient Glow
+                Center(
+                  child: Container(
+                    width: 110,
+                    height: 110,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF59D6B6).withValues(alpha: 0.35),
+                          blurRadius: 40,
+                          spreadRadius: 8,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                // Center Futuristic Icon with Orbit Ring
+                Center(
+                  child: Container(
+                    width: 84,
+                    height: 84,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF59D6B6), Color(0xFF2E8BFF)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.8),
+                        width: 2.5,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF59D6B6).withValues(alpha: 0.5),
+                          blurRadius: 20,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: const Center(
+                      child: Icon(
+                        Icons.rocket_launch_rounded,
+                        size: 44,
+                        color: Color(0xFF051726),
                       ),
                     ),
-                  ],
+                  ),
                 ),
-                SizedBox(height: 8),
-                Text(
-                  'Un modèle qui transforme des ambitions en trajectoires concrètes et opportunités durables.',
-                  style: TextStyle(
-                    color: Color(0xFFD5EAF7),
-                    fontSize: 13.5,
-                    height: 1.5,
+                // Floating Badge Top-Left (+92% Insertion)
+                Positioned(
+                  top: 4,
+                  left: 4,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF061A2E).withValues(alpha: 0.85),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: const Color(0xFF59D6B6).withValues(alpha: 0.5),
+                        width: 1,
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.trending_up_rounded, color: Color(0xFF59D6B6), size: 14),
+                        const SizedBox(width: 4),
+                        Text(
+                          LanguageService().t('vision_stat_1'),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                // Floating Badge Bottom-Right (2000+ Talents)
+                Positioned(
+                  bottom: 4,
+                  right: 4,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF061A2E).withValues(alpha: 0.85),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: const Color(0xFFE5A93C).withValues(alpha: 0.6),
+                        width: 1,
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.stars_rounded, color: Color(0xFFE5A93C), size: 14),
+                        const SizedBox(width: 4),
+                        Text(
+                          LanguageService().t('vision_stat_2'),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ],
             ),
           ),
+          const SizedBox(height: 18),
+          // Content & Description Box
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.05),
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(
+                color: Colors.white.withValues(alpha: 0.08),
+                width: 1,
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF59D6B6).withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(
+                        Icons.auto_awesome_rounded,
+                        color: Color(0xFF59D6B6),
+                        size: 16,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Text(
+                      LanguageService().t('vision_title'),
+                      style: const TextStyle(
+                        color: Color(0xFFF3F9FF),
+                        fontSize: 16,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 0.3,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  LanguageService().t('vision_desc'),
+                  style: const TextStyle(
+                    color: Color(0xFFD5EAF7),
+                    fontSize: 13.5,
+                    height: 1.5,
+                  ),
+                ),
+                const SizedBox(height: 14),
+                // Micro Capsules
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: [
+                    _buildPillarChip(LanguageService().t('vision_tag_1')),
+                    _buildPillarChip(LanguageService().t('vision_tag_2')),
+                    _buildPillarChip(LanguageService().t('vision_tag_3')),
+                  ],
+                ),
+              ],
+            ),
+          ),
         ],
+      ),
+    );
+  }
+
+  static Widget _buildPillarChip(String text) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+      decoration: BoxDecoration(
+        color: const Color(0xFF59D6B6).withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: const Color(0xFF59D6B6).withValues(alpha: 0.25),
+          width: 0.8,
+        ),
+      ),
+      child: Text(
+        text,
+        style: const TextStyle(
+          color: Color(0xFF59D6B6),
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
+        ),
       ),
     );
   }
@@ -714,10 +1022,10 @@ class _StatsSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const stats = [
-      _Stat(number: '2000+', label: 'personnes accompagnées'),
-      _Stat(number: '15+', label: 'partenaires actifs'),
-      _Stat(number: '85%', label: 'taux de satisfaction'),
+    final stats = [
+      _Stat(number: LanguageService().t('stat_assisted_num'), label: LanguageService().t('stat_assisted_lbl')),
+      _Stat(number: LanguageService().t('stat_partners_num'), label: LanguageService().t('stat_partners_lbl')),
+      _Stat(number: LanguageService().t('stat_satisfaction_num'), label: LanguageService().t('stat_satisfaction_lbl')),
     ];
 
     return Container(
@@ -788,21 +1096,21 @@ class _ServicesSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const items = [
+    final items = [
       _ServiceCard(
         icon: Icons.work_history_rounded,
-        title: 'Insertion professionnelle',
-        description: 'Accompagnement des jeunes vers des opportunités réelles, des missions et des emplois durables.',
+        title: LanguageService().t('service_1_title'),
+        description: LanguageService().t('service_1_desc'),
       ),
       _ServiceCard(
         icon: Icons.auto_stories_rounded,
-        title: 'Formation & montée en compétences',
-        description: 'Programmes orientés métier pour développer les compétences utiles au marché du travail.',
+        title: LanguageService().t('service_2_title'),
+        description: LanguageService().t('service_2_desc'),
       ),
       _ServiceCard(
         icon: Icons.support_agent_rounded,
-        title: 'Conseil & accompagnement',
-        description: 'Un suivi personnalisé, de la préparation au placement, avec un regard stratégique.',
+        title: LanguageService().t('service_3_title'),
+        description: LanguageService().t('service_3_desc'),
       ),
     ];
 
@@ -815,9 +1123,9 @@ class _ServicesSection extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                'NOS SERVICES',
-                style: TextStyle(
+              Text(
+                LanguageService().t('services_badge'),
+                style: const TextStyle(
                   color: Color(0xFF1B7AE6),
                   fontSize: 12,
                   letterSpacing: 2,
@@ -825,9 +1133,9 @@ class _ServicesSection extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 18),
-              const Text(
-                'Les services de la réussite.',
-                style: TextStyle(
+              Text(
+                LanguageService().t('services_title'),
+                style: const TextStyle(
                   color: Color(0xFF061A2E),
                   fontSize: 42,
                   fontWeight: FontWeight.w800,
@@ -938,9 +1246,9 @@ class _BusinessActivitiesSection extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                'NOS UNIVERS',
-                style: TextStyle(
+              Text(
+                LanguageService().t('univers_badge'),
+                style: const TextStyle(
                   color: Color(0xFF1B7AE6),
                   fontSize: 12,
                   letterSpacing: 2,
@@ -948,9 +1256,9 @@ class _BusinessActivitiesSection extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 18),
-              const Text(
-                'Des activités pensées pour vos projets.',
-                style: TextStyle(
+              Text(
+                LanguageService().t('univers_title'),
+                style: const TextStyle(
                   color: Color(0xFF061A2E),
                   fontSize: 42,
                   fontWeight: FontWeight.w800,
@@ -958,9 +1266,9 @@ class _BusinessActivitiesSection extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 14),
-              const Text(
-                'GREAT MINDS GROUP réunit des services spécialisés pour répondre à des besoins concrets.',
-                style: TextStyle(
+              Text(
+                LanguageService().t('univers_subtitle'),
+                style: const TextStyle(
                   color: Color(0xFF536D84),
                   fontSize: 16,
                   height: 1.6,
@@ -1088,7 +1396,7 @@ class _BusinessActivityCard extends StatelessWidget {
                     OutlinedButton.icon(
                       onPressed: onVisit,
                       icon: const Icon(Icons.arrow_forward_rounded, size: 18),
-                      label: const Text('Visiter le département'),
+                      label: Text(LanguageService().t('univers_visit_dept')),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: const Color(0xFF073454),
                         backgroundColor: const Color(0xFF59D6B6),
@@ -1211,6 +1519,103 @@ class _DepartmentPage extends StatelessWidget {
                   ),
                 ),
               ),
+
+              // Dynamic Publications & Announcements Section for this department
+              ListenableBuilder(
+                listenable: AppDataService(),
+                builder: (context, _) {
+                  final pubs = AppDataService().publishedPublications.where((p) {
+                    final dept = p.department.toLowerCase();
+                    final actId = activity.id.toLowerCase();
+                    if (actId == 'parfum') return dept.contains('parfum');
+                    if (actId == 'texa') return dept.contains('texa') || dept.contains('visa') || dept.contains('passeport');
+                    if (actId == 'autosolution') return dept.contains('auto');
+                    if (actId == 'fondation') return dept.contains('fondation');
+                    if (actId == 'emploi') return dept.contains('emploi') || dept.contains('formation');
+                    return dept.contains(actId) || activity.title.toLowerCase().contains(dept);
+                  }).toList();
+
+                  if (pubs.isEmpty) return const SizedBox.shrink();
+
+                  return Container(
+                    color: const Color(0xFFF9FBFF),
+                    padding: const EdgeInsets.fromLTRB(24, 60, 24, 60),
+                    child: Center(
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 1100),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Text(
+                                      'ACTUALITÉS & ANNONCES DU DÉPARTEMENT',
+                                      style: TextStyle(
+                                        color: Color(0xFF1B7AE6),
+                                        fontWeight: FontWeight.w800,
+                                        letterSpacing: 1.8,
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      'Publications de ${activity.title}',
+                                      style: const TextStyle(
+                                        color: Color(0xFF061A2E),
+                                        fontSize: 32,
+                                        fontWeight: FontWeight.w800,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF1B7AE6).withValues(alpha: 0.1),
+                                    borderRadius: BorderRadius.circular(20),
+                                  ),
+                                  child: Text(
+                                    '${pubs.length} publication${pubs.length > 1 ? "s" : ""}',
+                                    style: const TextStyle(
+                                      color: Color(0xFF1B7AE6),
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 13,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 28),
+                            LayoutBuilder(
+                              builder: (context, constraints) {
+                                final compact = constraints.maxWidth < 760;
+                                return Wrap(
+                                  spacing: 20,
+                                  runSpacing: 20,
+                                  children: pubs.map((pub) {
+                                    return SizedBox(
+                                      width: compact ? double.infinity : (constraints.maxWidth - 20) / 2,
+                                      child: _DepartmentPublicationCard(
+                                        publication: pub,
+                                        activity: activity,
+                                      ),
+                                    );
+                                  }).toList(),
+                                );
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+
               // Dynamic Products & Opportunities Section for this department
               ListenableBuilder(
                 listenable: AppDataService(),
@@ -1342,6 +1747,140 @@ class _DepartmentPage extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _DepartmentPublicationCard extends StatelessWidget {
+  const _DepartmentPublicationCard({
+    required this.publication,
+    required this.activity,
+  });
+
+  final Publication publication;
+  final BusinessActivity activity;
+
+  @override
+  Widget build(BuildContext context) {
+    final dateStr = DateFormat('dd MMM yyyy', 'fr_FR').format(publication.publishedDate);
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFFE2EBF5)),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x08000000),
+            blurRadius: 16,
+            offset: Offset(0, 6),
+          ),
+        ],
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (publication.primaryImage != null)
+            SizedBox(
+              height: 180,
+              width: double.infinity,
+              child: AppImageViewer(
+                imageSource: publication.primaryImage,
+                fit: BoxFit.cover,
+              ),
+            ),
+          Padding(
+            padding: const EdgeInsets.all(22),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF1B7AE6).withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        publication.category,
+                        style: const TextStyle(
+                          color: Color(0xFF1B7AE6),
+                          fontSize: 11,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                    const Spacer(),
+                    Text(
+                      dateStr,
+                      style: const TextStyle(
+                        color: AppTheme.textSecondary,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 14),
+                Text(
+                  publication.title,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                    color: Color(0xFF061A2E),
+                    height: 1.25,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  publication.summary,
+                  style: const TextStyle(
+                    color: Color(0xFF5A7184),
+                    fontSize: 13,
+                    height: 1.5,
+                  ),
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 18),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      publication.author,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: AppTheme.textSecondary,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    FilledButton.icon(
+                      onPressed: () {
+                        AppDataService().incrementPublicationViews(publication.id);
+                        showDialog<void>(
+                          context: context,
+                          builder: (context) => PublicationDetailDialog(publication: publication),
+                        );
+                      },
+                      icon: const Icon(Icons.arrow_forward_rounded, size: 14),
+                      label: const Text('Lire l’article'),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: const Color(0xFF061A2E),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -1651,13 +2190,13 @@ class _AboutSection extends StatelessWidget {
               final textBlock = Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'À PROPOS',
-                    style: TextStyle(color: Color(0xFF59D6B6), fontSize: 12, letterSpacing: 2, fontWeight: FontWeight.w700),
+                  Text(
+                    LanguageService().t('about_badge'),
+                    style: const TextStyle(color: Color(0xFF59D6B6), fontSize: 12, letterSpacing: 2, fontWeight: FontWeight.w700),
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    'Une plateforme pour créer des opportunités de vie.',
+                    LanguageService().t('about_title'),
                     style: TextStyle(
                       color: Colors.white,
                       fontSize: compact ? 36 : 46,
@@ -1666,9 +2205,9 @@ class _AboutSection extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 18),
-                  const Text(
-                    'GREAT MINDS GROUP accompagne les jeunes et les organisations dans l’accès à l’emploi, la formation, l’autonomie professionnelle et la construction d’un avenir solide.',
-                    style: TextStyle(color: Color(0xFFCBDCEB), height: 1.7, fontSize: 17),
+                  Text(
+                    LanguageService().t('about_subtitle'),
+                    style: const TextStyle(color: Color(0xFFCBDCEB), height: 1.7, fontSize: 17),
                   ),
                   const SizedBox(height: 24),
                   const _AboutList(),
@@ -1713,10 +2252,10 @@ class _AboutList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const items = [
-      'Consulting stratégique et accompagnement humain',
-      'Création de parcours professionnels adaptés',
-      'Valorisation des talents et des potentialités',
+    final items = [
+      LanguageService().t('about_point_1'),
+      LanguageService().t('about_point_2'),
+      LanguageService().t('about_point_3'),
     ];
 
     return Column(
@@ -1749,10 +2288,10 @@ class _ProcessSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const steps = [
-      ('01', 'Écoute', 'Nous identifions les besoins, la situation et les objectifs visés.'),
-      ('02', 'Plan d’action', 'Nous construisons un parcours clair, pratique et réaliste.'),
-      ('03', 'Suivi & impact', 'Nous accompagnons jusqu’à l’insertion, la stabilisation et la réussite.'),
+    final steps = [
+      ('01', LanguageService().t('step_1_title'), LanguageService().t('step_1_desc')),
+      ('02', LanguageService().t('step_2_title'), LanguageService().t('step_2_desc')),
+      ('03', LanguageService().t('step_3_title'), LanguageService().t('step_3_desc')),
     ];
 
     return Container(
@@ -1764,14 +2303,14 @@ class _ProcessSection extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                'NOTRE MÉTHODE',
-                style: TextStyle(color: Color(0xFF1B7AE6), fontSize: 12, letterSpacing: 2, fontWeight: FontWeight.w700),
+              Text(
+                LanguageService().t('process_badge'),
+                style: const TextStyle(color: Color(0xFF1B7AE6), fontSize: 12, letterSpacing: 2, fontWeight: FontWeight.w700),
               ),
               const SizedBox(height: 18),
-              const Text(
-                'Un accompagnement pensé pour aller loin.',
-                style: TextStyle(color: Color(0xFF061A2E), fontSize: 42, fontWeight: FontWeight.w800, height: 1.05),
+              Text(
+                LanguageService().t('process_title'),
+                style: const TextStyle(color: Color(0xFF061A2E), fontSize: 42, fontWeight: FontWeight.w800, height: 1.05),
               ),
               const SizedBox(height: 36),
               LayoutBuilder(
@@ -1845,9 +2384,9 @@ class _CTASection extends StatelessWidget {
           child: LayoutBuilder(
             builder: (context, constraints) {
               final compact = constraints.maxWidth < 720;
-              const text = Text(
-                'Votre avenir mérite une vraie opportunité.',
-                style: TextStyle(color: Color(0xFF061A2E), fontSize: 42, fontWeight: FontWeight.w800, height: 1.1),
+              final text = Text(
+                LanguageService().t('cta_title'),
+                style: const TextStyle(color: Color(0xFF061A2E), fontSize: 42, fontWeight: FontWeight.w800, height: 1.1),
               );
               final button = FilledButton(
                 onPressed: onContact,
@@ -1856,11 +2395,11 @@ class _CTASection extends StatelessWidget {
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 18),
                 ),
-                child: const Text('Discutons sur WhatsApp'),
+                child: Text(LanguageService().t('cta_button')),
               );
               return compact
                   ? Column(crossAxisAlignment: CrossAxisAlignment.start, children: [text, const SizedBox(height: 24), button])
-                  : Row(children: [const Expanded(child: text), button]);
+                  : Row(children: [Expanded(child: text), button]);
             },
           ),
         ),
@@ -1902,9 +2441,9 @@ class _Footer extends StatelessWidget {
                         child: TextButton.icon(
                           onPressed: () => PwaInstallService.promptInstall(context),
                           icon: const Icon(Icons.install_mobile_rounded, size: 16, color: Color(0xFFE5A93C)),
-                          label: const Text(
-                            'Installer l\'App',
-                            style: TextStyle(color: Color(0xFFE5A93C), fontWeight: FontWeight.w700),
+                          label: Text(
+                            LanguageService().t('nav_install'),
+                            style: const TextStyle(color: Color(0xFFE5A93C), fontWeight: FontWeight.w700),
                           ),
                         ),
                       );
@@ -1913,18 +2452,85 @@ class _Footer extends StatelessWidget {
                   TextButton.icon(
                     onPressed: onAdminPortal,
                     icon: const Icon(Icons.lock_outline_rounded, size: 16, color: Color(0xFF8FBCE4)),
-                    label: const Text(
-                      'Accès Espace Admin',
-                      style: TextStyle(color: Color(0xFF8FBCE4), fontWeight: FontWeight.w600),
+                    label: Text(
+                      LanguageService().t('nav_admin'),
+                      style: const TextStyle(color: Color(0xFF8FBCE4), fontWeight: FontWeight.w600),
                     ),
                   ),
                   const SizedBox(width: 14),
                   TextButton(
                     onPressed: onContact,
-                    child: const Text(
-                      'Contact Direct',
-                      style: TextStyle(color: Color(0xFF59D6B6), fontWeight: FontWeight.w700),
+                    child: Text(
+                      LanguageService().t('contact_btn_chat'),
+                      style: const TextStyle(color: Color(0xFF59D6B6), fontWeight: FontWeight.w700),
                     ),
+                  ),
+                  const SizedBox(width: 14),
+                  // Footer Language Selector
+                  ListenableBuilder(
+                    listenable: LanguageService(),
+                    builder: (context, _) {
+                      final currentLang = LanguageService().currentLanguage;
+                      final currentModel = LanguageService().currentLanguageModel;
+                      return PopupMenuButton<String>(
+                        tooltip: 'Langue / Language',
+                        onSelected: (String langCode) {
+                          LanguageService().setLanguage(langCode);
+                        },
+                        offset: const Offset(0, -180),
+                        color: const Color(0xFF0D253A),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          side: BorderSide(color: Colors.white.withValues(alpha: 0.15)),
+                        ),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.08),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(currentModel.flag, style: const TextStyle(fontSize: 15)),
+                              const SizedBox(width: 6),
+                              Text(
+                                currentModel.name,
+                                style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w700),
+                              ),
+                              const Icon(Icons.arrow_drop_up_rounded, color: Colors.white70, size: 16),
+                            ],
+                          ),
+                        ),
+                        itemBuilder: (BuildContext context) {
+                          return LanguageService().supportedLanguages.map((lang) {
+                            final isSelected = lang.code == currentLang;
+                            return PopupMenuItem<String>(
+                              value: lang.code,
+                              child: Row(
+                                children: [
+                                  Text(lang.flag, style: const TextStyle(fontSize: 18)),
+                                  const SizedBox(width: 10),
+                                  Text(
+                                    lang.name,
+                                    style: TextStyle(
+                                      color: isSelected ? const Color(0xFF59D6B6) : Colors.white,
+                                      fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                                      fontSize: 13,
+                                    ),
+                                  ),
+                                  if (isSelected) ...[
+                                    const Spacer(),
+                                    const Icon(Icons.check_rounded, color: Color(0xFF59D6B6), size: 16),
+                                  ],
+                                ],
+                              ),
+                            );
+                          }).toList();
+                        },
+                      );
+                    },
                   ),
                 ],
               ),
@@ -1936,13 +2542,402 @@ class _Footer extends StatelessWidget {
                 style: const TextStyle(color: Color(0xFF59D6B6), fontSize: 14, fontWeight: FontWeight.w700),
               ),
               const SizedBox(height: 10),
-              const Text(
-                '© 2026 GREAT MINDS GROUP — Accompagnement, insertion, formation et impact social.',
-                style: TextStyle(color: Color(0xFFD9E8F8), fontSize: 12),
+              Text(
+                LanguageService().t('footer_rights'),
+                style: const TextStyle(color: Color(0xFFD9E8F8), fontSize: 12),
               ),
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+// ==========================================
+// MOBILE DRAWER NAVIGATION
+// ==========================================
+class _MobileDrawer extends StatelessWidget {
+  const _MobileDrawer({
+    required this.onNavigate,
+    required this.onContact,
+    required this.onAdminPortal,
+  });
+
+  final ValueChanged<String> onNavigate;
+  final VoidCallback onContact;
+  final VoidCallback onAdminPortal;
+
+  @override
+  Widget build(BuildContext context) {
+    return Drawer(
+      backgroundColor: const Color(0xFF061A2E),
+      child: SafeArea(
+        child: Column(
+          children: [
+            // Header with Logo, GM GROUP title and Close button
+            Container(
+              padding: const EdgeInsets.fromLTRB(20, 16, 12, 16),
+              decoration: const BoxDecoration(
+                border: Border(
+                  bottom: BorderSide(color: Color(0xFF1B3A5E)),
+                ),
+              ),
+              child: Row(
+                children: [
+                  const _HeroLogo(),
+                  const SizedBox(width: 12),
+                  const Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'GREAT MINDS',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: -0.5,
+                          ),
+                        ),
+                        Text(
+                          'GROUP',
+                          style: TextStyle(
+                            color: Color(0xFF59D6B6),
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 2,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    icon: const Icon(Icons.close_rounded, color: Colors.white70),
+                    tooltip: 'Fermer',
+                  ),
+                ],
+              ),
+            ),
+
+            // Language Selector Chips (Reactive)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              color: const Color(0xFF0B253E),
+              child: ListenableBuilder(
+                listenable: LanguageService(),
+                builder: (context, _) {
+                  final currentLang = LanguageService().currentLanguage;
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Padding(
+                        padding: EdgeInsets.only(bottom: 8, left: 4),
+                        child: Text(
+                          'Langue / Language',
+                          style: TextStyle(
+                            color: Colors.white54,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                      ),
+                      SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: Row(
+                          children: LanguageService().supportedLanguages.map((lang) {
+                            final isSelected = lang.code == currentLang;
+                            return Padding(
+                              padding: const EdgeInsets.only(right: 8),
+                              child: ChoiceChip(
+                                showCheckmark: false,
+                                label: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(lang.flag, style: const TextStyle(fontSize: 14)),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      lang.name,
+                                      style: TextStyle(
+                                        color: isSelected ? const Color(0xFF061A2E) : Colors.white,
+                                        fontSize: 12,
+                                        fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                selected: isSelected,
+                                selectedColor: const Color(0xFF59D6B6),
+                                backgroundColor: const Color(0xFF113C62),
+                                side: BorderSide(
+                                  color: isSelected
+                                      ? const Color(0xFF59D6B6)
+                                      : Colors.white.withValues(alpha: 0.15),
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                onSelected: (_) {
+                                  LanguageService().setLanguage(lang.code);
+                                },
+                              ),
+                            );
+                          }).toList(),
+                        ),
+                      ),
+                    ],
+                  );
+                },
+              ),
+            ),
+
+            // Navigation Items List
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+                children: [
+                  _drawerItem(
+                    icon: Icons.home_rounded,
+                    title: LanguageService().t('nav_home'),
+                    onTap: () {
+                      Navigator.of(context).pop();
+                      onNavigate('home');
+                    },
+                  ),
+                  _drawerItem(
+                    icon: Icons.business_center_rounded,
+                    title: LanguageService().t('nav_activities'),
+                    subtitle: 'Conseil, Formation & Projets',
+                    onTap: () {
+                      Navigator.of(context).pop();
+                      onNavigate('services');
+                    },
+                  ),
+                  _drawerItem(
+                    icon: Icons.domain_rounded,
+                    title: 'Univers GM',
+                    subtitle: 'Nos départements et filiales',
+                    onTap: () {
+                      Navigator.of(context).pop();
+                      onNavigate('univers');
+                    },
+                  ),
+                  _drawerItem(
+                    icon: Icons.work_rounded,
+                    title: LanguageService().t('nav_offers'),
+                    subtitle: 'Emplois, bourses & stages',
+                    badge: 'NOUVEAU',
+                    isAccent: true,
+                    onTap: () {
+                      Navigator.of(context).pop();
+                      onNavigate('offers');
+                    },
+                  ),
+                  _drawerItem(
+                    icon: Icons.newspaper_rounded,
+                    title: LanguageService().t('nav_publications'),
+                    subtitle: 'Articles, communiqués & annonces',
+                    onTap: () {
+                      Navigator.of(context).pop();
+                      onNavigate('news');
+                    },
+                  ),
+                  _drawerItem(
+                    icon: Icons.info_outline_rounded,
+                    title: LanguageService().t('nav_contact'),
+                    subtitle: 'Notre mission & équipe',
+                    onTap: () {
+                      Navigator.of(context).pop();
+                      onNavigate('about');
+                    },
+                  ),
+                  _drawerItem(
+                    icon: Icons.route_rounded,
+                    title: 'Méthodologie & Process',
+                    subtitle: 'Notre démarche étape par étape',
+                    onTap: () {
+                      Navigator.of(context).pop();
+                      onNavigate('method');
+                    },
+                  ),
+
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 8),
+                    child: Divider(color: Color(0xFF1B3A5E)),
+                  ),
+
+                  // Actions in Drawer: Sync Data
+                  ListenableBuilder(
+                    listenable: AppDataService(),
+                    builder: (context, _) {
+                      final isSyncing = AppDataService().isSyncing;
+                      return ListTile(
+                        leading: isSyncing
+                            ? const SizedBox(
+                                width: 22,
+                                height: 22,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Color(0xFF59D6B6),
+                                ),
+                              )
+                            : const Icon(Icons.sync_rounded, color: Color(0xFF59D6B6), size: 22),
+                        title: Text(
+                          LanguageService().t('nav_sync_tooltip'),
+                          style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600),
+                        ),
+                        subtitle: const Text(
+                          'Mise à jour en direct (10s auto)',
+                          style: TextStyle(color: Colors.white54, fontSize: 11),
+                        ),
+                        onTap: () async {
+                          await AppDataService().syncData();
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(LanguageService().t('nav_sync_success')),
+                                duration: const Duration(seconds: 2),
+                                behavior: SnackBarBehavior.floating,
+                              ),
+                            );
+                          }
+                        },
+                      );
+                    },
+                  ),
+
+                  // Admin Portal Tile
+                  ListTile(
+                    leading: const Icon(Icons.admin_panel_settings_rounded, color: AppTheme.accentCyan, size: 22),
+                    title: Text(
+                      LanguageService().t('nav_admin'),
+                      style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600),
+                    ),
+                    subtitle: const Text(
+                      'Connexion administrateur',
+                      style: TextStyle(color: Colors.white54, fontSize: 11),
+                    ),
+                    onTap: () {
+                      Navigator.of(context).pop();
+                      onAdminPortal();
+                    },
+                  ),
+                ],
+              ),
+            ),
+
+            // WhatsApp Contact Button at Bottom
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: const BoxDecoration(
+                color: Color(0xFF071E34),
+                border: Border(top: BorderSide(color: Color(0xFF1B3A5E))),
+              ),
+              child: Column(
+                children: [
+                  SizedBox(
+                    width: double.infinity,
+                    child: FilledButton.icon(
+                      onPressed: () {
+                        Navigator.of(context).pop();
+                        onContact();
+                      },
+                      icon: const Icon(Icons.chat_rounded, size: 18),
+                      label: Text(LanguageService().t('contact_btn_chat')),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: const Color(0xFF59D6B6),
+                        foregroundColor: const Color(0xFF061A2E),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'WhatsApp : +${AppDataService().whatsAppNumber}',
+                    style: const TextStyle(color: Color(0xFF59D6B6), fontSize: 12, fontWeight: FontWeight.w600),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _drawerItem({
+    required IconData icon,
+    required String title,
+    String? subtitle,
+    String? badge,
+    bool isAccent = false,
+    required VoidCallback onTap,
+  }) {
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 3),
+      decoration: BoxDecoration(
+        color: isAccent ? const Color(0xFF59D6B6).withValues(alpha: 0.1) : Colors.transparent,
+        borderRadius: BorderRadius.circular(10),
+        border: isAccent
+            ? Border.all(color: const Color(0xFF59D6B6).withValues(alpha: 0.3))
+            : null,
+      ),
+      child: ListTile(
+        leading: Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: isAccent
+                ? const Color(0xFF59D6B6).withValues(alpha: 0.2)
+                : Colors.white.withValues(alpha: 0.05),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(
+            icon,
+            color: isAccent ? const Color(0xFF59D6B6) : Colors.white70,
+            size: 20,
+          ),
+        ),
+        title: Row(
+          children: [
+            Expanded(
+              child: Text(
+                title,
+                style: TextStyle(
+                  color: isAccent ? const Color(0xFF59D6B6) : Colors.white,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 14,
+                ),
+              ),
+            ),
+            if (badge != null)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE5A93C),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Text(
+                  badge,
+                  style: const TextStyle(
+                    color: Colors.black,
+                    fontSize: 9,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+          ],
+        ),
+        subtitle: subtitle != null
+            ? Text(
+                subtitle,
+                style: const TextStyle(color: Colors.white54, fontSize: 11),
+              )
+            : null,
+        trailing: const Icon(Icons.chevron_right_rounded, color: Colors.white30, size: 20),
+        onTap: onTap,
       ),
     );
   }
