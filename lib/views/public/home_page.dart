@@ -237,11 +237,20 @@ class _HeroSection extends StatelessWidget {
                   builder: (context, constraints) {
                     final compact = constraints.maxWidth < 760;
                     return Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 24),
+                      padding: EdgeInsets.symmetric(
+                        horizontal: compact ? 8 : 18,
+                        vertical: compact ? 12 : 24,
+                      ),
                       child: compact
                           ? Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
-                              children: _heroContent(onExplore, onContact, onAdminPortal, compact: true),
+                              children: [
+                                ..._heroContent(onExplore, onContact, onAdminPortal, compact: true),
+                                const SizedBox(height: 36),
+                                const Center(
+                                  child: _BusinessVisual(isCompact: true),
+                                ),
+                              ],
                             )
                           : Row(
                               crossAxisAlignment: CrossAxisAlignment.center,
@@ -275,14 +284,14 @@ class _HeroSection extends StatelessWidget {
   }) => [
     const _HeroLogo(),
     const SizedBox(height: 26),
-    const Text(
+    Text(
       'GREAT MINDS\nGROUP',
       style: TextStyle(
-        fontSize: 58,
+        fontSize: compact ? 38 : 58,
         fontWeight: FontWeight.w800,
-        color: Color(0xFFF5FAFF),
+        color: const Color(0xFFF5FAFF),
         height: 0.95,
-        letterSpacing: -2,
+        letterSpacing: compact ? -1 : -2,
       ),
     ),
     const SizedBox(height: 18),
@@ -359,39 +368,50 @@ class _Navigation extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final width = MediaQuery.sizeOf(context).width;
+    final isMobile = width < 760;
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 4),
       child: Row(
         children: [
           const _Brand(),
           const Spacer(),
-          if (width > 860) ...[
+          if (!isMobile) ...[
             TextButton(onPressed: () => onNavigate('services'), child: const Text('Services', style: TextStyle(color: Colors.white70))),
             TextButton(onPressed: () => onNavigate('univers'), child: const Text('Univers GM', style: TextStyle(color: Colors.white70))),
             TextButton(onPressed: () => onNavigate('offers'), child: const Text('Offres & Emploi', style: TextStyle(color: AppTheme.accentCyan, fontWeight: FontWeight.w700))),
             TextButton(onPressed: () => onNavigate('news'), child: const Text('Actualités', style: TextStyle(color: Colors.white70))),
             TextButton(onPressed: () => onNavigate('about'), child: const Text('À propos', style: TextStyle(color: Colors.white70))),
+            const SizedBox(width: 8),
           ],
-          const SizedBox(width: 8),
           // Install App Button
           ValueListenableBuilder<bool>(
             valueListenable: PwaInstallService.isInstalledNotifier,
             builder: (context, isInstalled, child) {
               if (isInstalled) return const SizedBox.shrink();
               return Padding(
-                padding: const EdgeInsets.only(right: 8),
-                child: ElevatedButton.icon(
-                  onPressed: () => PwaInstallService.promptInstall(context),
-                  icon: const Icon(Icons.install_mobile_rounded, size: 16),
-                  label: const Text('Installer l\'App', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFE5A93C),
-                    foregroundColor: Colors.black,
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                  ),
-                ),
+                padding: const EdgeInsets.only(right: 6),
+                child: isMobile
+                    ? IconButton(
+                        onPressed: () => PwaInstallService.promptInstall(context),
+                        tooltip: 'Installer l\'Application',
+                        style: IconButton.styleFrom(
+                          backgroundColor: const Color(0xFFE5A93C),
+                          foregroundColor: Colors.black,
+                        ),
+                        icon: const Icon(Icons.install_mobile_rounded, size: 20),
+                      )
+                    : ElevatedButton.icon(
+                        onPressed: () => PwaInstallService.promptInstall(context),
+                        icon: const Icon(Icons.install_mobile_rounded, size: 16),
+                        label: const Text('Installer l\'App', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFFE5A93C),
+                          foregroundColor: Colors.black,
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        ),
+                      ),
               );
             },
           ),
@@ -405,16 +425,28 @@ class _Navigation extends StatelessWidget {
             ),
             icon: const Icon(Icons.admin_panel_settings_rounded, size: 20),
           ),
-          const SizedBox(width: 8),
-          OutlinedButton(
-            onPressed: onContact,
-            style: OutlinedButton.styleFrom(
-              foregroundColor: Colors.white,
-              side: const BorderSide(color: Color(0xFF59D6B6)),
-              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+          const SizedBox(width: 6),
+          // Contact WhatsApp Button
+          if (isMobile)
+            IconButton(
+              onPressed: onContact,
+              tooltip: 'Contact WhatsApp',
+              style: IconButton.styleFrom(
+                backgroundColor: const Color(0xFF59D6B6),
+                foregroundColor: const Color(0xFF061A2E),
+              ),
+              icon: const Icon(Icons.chat_rounded, size: 20),
+            )
+          else
+            OutlinedButton(
+              onPressed: onContact,
+              style: OutlinedButton.styleFrom(
+                foregroundColor: Colors.white,
+                side: const BorderSide(color: Color(0xFF59D6B6)),
+                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+              ),
+              child: const Text('Contact WhatsApp'),
             ),
-            child: const Text('Contact WhatsApp'),
-          ),
         ],
       ),
     );
@@ -566,67 +598,84 @@ class _Pill extends StatelessWidget {
 }
 
 class _BusinessVisual extends StatelessWidget {
-  const _BusinessVisual();
+  const _BusinessVisual({this.isCompact = false});
+
+  final bool isCompact;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 330,
-      height: 420,
+      width: isCompact ? double.infinity : 340,
+      constraints: const BoxConstraints(maxWidth: 420),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: const Color(0xFF153D61),
-        borderRadius: BorderRadius.circular(32),
+        borderRadius: BorderRadius.circular(28),
         border: Border.all(color: const Color(0xFF96CAEA), width: 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.25),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          ),
+        ],
       ),
-      child: Stack(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Positioned(
-            top: 28,
-            left: 24,
-            right: 24,
-            child: Container(
-              height: 180,
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFF59D6B6), Color(0xFF3A9BFF)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.circular(26),
+          Container(
+            height: isCompact ? 150 : 180,
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [Color(0xFF59D6B6), Color(0xFF3A9BFF)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
               ),
-              child: const Center(
-                child: Icon(
-                  Icons.insights_rounded,
-                  size: 82,
-                  color: Color(0xFF061A2E),
-                ),
+              borderRadius: BorderRadius.circular(22),
+            ),
+            child: const Center(
+              child: Icon(
+                Icons.insights_rounded,
+                size: 72,
+                color: Color(0xFF061A2E),
               ),
             ),
           ),
-          Positioned(
-            bottom: 28,
-            left: 28,
-            right: 28,
-            child: Container(
-              padding: const EdgeInsets.all(18),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.08),
-                borderRadius: BorderRadius.circular(22),
-              ),
-              child: const Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Vision & résultats',
-                    style: TextStyle(color: Color(0xFFF3F9FF), fontSize: 15, fontWeight: FontWeight.w700),
+          const SizedBox(height: 18),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(18),
+            ),
+            child: const Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.auto_graph_rounded, color: Color(0xFF59D6B6), size: 18),
+                    SizedBox(width: 8),
+                    Text(
+                      'Vision & résultats',
+                      style: TextStyle(
+                        color: Color(0xFFF3F9FF),
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ),
+                SizedBox(height: 8),
+                Text(
+                  'Un modèle qui transforme des ambitions en trajectoires concrètes et opportunités durables.',
+                  style: TextStyle(
+                    color: Color(0xFFD5EAF7),
+                    fontSize: 13.5,
+                    height: 1.5,
                   ),
-                  SizedBox(height: 8),
-                  Text(
-                    'Un modèle qui transforme des ambitions en trajectoires concrètes.',
-                    style: TextStyle(color: Color(0xFFD5EAF7), height: 1.5),
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
         ],
