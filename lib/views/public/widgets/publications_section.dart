@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../models/publication_model.dart';
 import '../../../services/app_data_service.dart';
+import '../../common/app_image_viewer.dart';
 import 'publication_detail_dialog.dart';
 
 class PublicationsSection extends StatefulWidget {
@@ -199,28 +200,42 @@ class _PublicationsSectionState extends State<PublicationsSection> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Header Image or Placeholder
-          if (pub.imageUrl != null && pub.imageUrl!.isNotEmpty)
-            SizedBox(
-              height: 170,
-              width: double.infinity,
-              child:
-                  pub.imageUrl!.startsWith('http://') ||
-                      pub.imageUrl!.startsWith('https://')
-                  ? Image.network(
-                      pub.imageUrl!,
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) =>
-                          _buildCardImagePlaceholder(pub),
-                    )
-                  : Image.asset(
-                      pub.imageUrl!,
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) =>
-                          _buildCardImagePlaceholder(pub),
+          Stack(
+            children: [
+              SizedBox(
+                height: 170,
+                width: double.infinity,
+                child: AppImageViewer(
+                  imageSource: pub.primaryImage,
+                  fit: BoxFit.cover,
+                  errorWidget: _buildCardImagePlaceholder(pub),
+                ),
+              ),
+              if (pub.allImages.length > 1)
+                Positioned(
+                  top: 10,
+                  right: 10,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.75),
+                      borderRadius: BorderRadius.circular(12),
                     ),
-            )
-          else
-            _buildCardImagePlaceholder(pub),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.photo_library_rounded, size: 12, color: Colors.white),
+                        const SizedBox(width: 4),
+                        Text(
+                          '${pub.allImages.length}',
+                          style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+            ],
+          ),
 
           Padding(
             padding: const EdgeInsets.all(22),

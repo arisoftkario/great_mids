@@ -6,6 +6,7 @@ class Publication {
   final String content;
   final String author;
   final String? imageUrl;
+  final List<String> images;
   final DateTime publishedDate;
   final bool isPublished; // true = Publié, false = Brouillon
   final List<String> tags;
@@ -19,11 +20,26 @@ class Publication {
     required this.content,
     required this.author,
     this.imageUrl,
+    this.images = const [],
     required this.publishedDate,
     this.isPublished = true,
     this.tags = const [],
     this.viewsCount = 0,
   });
+
+  /// Retourne la liste complète des images (inclut imageUrl si non vide)
+  List<String> get allImages {
+    final list = <String>[];
+    if (images.isNotEmpty) {
+      list.addAll(images);
+    } else if (imageUrl != null && imageUrl!.trim().isNotEmpty) {
+      list.add(imageUrl!.trim());
+    }
+    return list;
+  }
+
+  /// Image principale
+  String? get primaryImage => allImages.isNotEmpty ? allImages.first : imageUrl;
 
   Publication copyWith({
     String? id,
@@ -33,6 +49,7 @@ class Publication {
     String? content,
     String? author,
     String? imageUrl,
+    List<String>? images,
     DateTime? publishedDate,
     bool? isPublished,
     List<String>? tags,
@@ -46,6 +63,7 @@ class Publication {
       content: content ?? this.content,
       author: author ?? this.author,
       imageUrl: imageUrl ?? this.imageUrl,
+      images: images ?? this.images,
       publishedDate: publishedDate ?? this.publishedDate,
       isPublished: isPublished ?? this.isPublished,
       tags: tags ?? this.tags,
@@ -61,7 +79,8 @@ class Publication {
       'summary': summary,
       'content': content,
       'author': author,
-      'imageUrl': imageUrl,
+      'imageUrl': primaryImage,
+      'images': images,
       'publishedDate': publishedDate.toIso8601String(),
       'isPublished': isPublished,
       'tags': tags,
@@ -70,6 +89,17 @@ class Publication {
   }
 
   factory Publication.fromJson(Map<String, dynamic> json) {
+    final parsedImages = (json['images'] as List<dynamic>?)
+            ?.map((e) => e.toString())
+            .where((s) => s.isNotEmpty)
+            .toList() ??
+        [];
+
+    final mainImage = json['imageUrl'] as String?;
+    if (parsedImages.isEmpty && mainImage != null && mainImage.isNotEmpty) {
+      parsedImages.add(mainImage);
+    }
+
     return Publication(
       id: json['id'] as String,
       title: json['title'] as String,
@@ -77,7 +107,8 @@ class Publication {
       summary: json['summary'] as String? ?? '',
       content: json['content'] as String? ?? '',
       author: json['author'] as String? ?? 'Direction GM GROUP',
-      imageUrl: json['imageUrl'] as String?,
+      imageUrl: mainImage ?? (parsedImages.isNotEmpty ? parsedImages.first : null),
+      images: parsedImages,
       publishedDate: json['publishedDate'] != null
           ? DateTime.tryParse(json['publishedDate'] as String) ?? DateTime.now()
           : DateTime.now(),

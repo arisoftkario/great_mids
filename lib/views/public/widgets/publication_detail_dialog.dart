@@ -4,15 +4,24 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../models/publication_model.dart';
 import '../../../services/app_data_service.dart';
+import '../../common/app_image_viewer.dart';
 
-class PublicationDetailDialog extends StatelessWidget {
+class PublicationDetailDialog extends StatefulWidget {
   final Publication publication;
 
   const PublicationDetailDialog({super.key, required this.publication});
 
+  @override
+  State<PublicationDetailDialog> createState() => _PublicationDetailDialogState();
+}
+
+class _PublicationDetailDialogState extends State<PublicationDetailDialog> {
+  int _selectedImageIndex = 0;
+
   Future<void> _shareWhatsApp(BuildContext context) async {
     final whatsAppNumber = AppDataService().whatsAppNumber;
-    final message = 'Bonjour GREAT MINDS GROUP, j’ai lu votre article "${publication.title}" et j’aimerais en savoir plus.';
+    final message =
+        'Bonjour GREAT MINDS GROUP, j’ai lu votre article "${widget.publication.title}" et j’aimerais en savoir plus.';
     final uri = Uri.https('wa.me', '/$whatsAppNumber', {'text': message});
     if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
       if (context.mounted) {
@@ -25,13 +34,15 @@ class PublicationDetailDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final publication = widget.publication;
+    final allImages = publication.allImages;
     final dateStr = DateFormat('dd MMMM yyyy', 'fr_FR').format(publication.publishedDate);
 
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
       backgroundColor: Colors.white,
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 760, maxHeight: 850),
+        constraints: const BoxConstraints(maxWidth: 780, maxHeight: 880),
         child: Column(
           children: [
             // Top Bar
@@ -69,29 +80,80 @@ class PublicationDetailDialog extends StatelessWidget {
             // Content
             Expanded(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.all(32),
+                padding: const EdgeInsets.all(28),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    if (publication.imageUrl != null && publication.imageUrl!.isNotEmpty) ...[
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(16),
-                        child: SizedBox(
-                          height: 240,
-                          width: double.infinity,
-                          child: publication.imageUrl!.startsWith('http://') || publication.imageUrl!.startsWith('https://')
-                              ? Image.network(
-                                  publication.imageUrl!,
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (context, error, stackTrace) => const SizedBox.shrink(),
-                                )
-                              : Image.asset(
-                                  publication.imageUrl!,
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (context, error, stackTrace) => const SizedBox.shrink(),
+                    // Galerie / Affichage Photos
+                    if (allImages.isNotEmpty) ...[
+                      // Photo active agrandie
+                      Stack(
+                        children: [
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(16),
+                            child: SizedBox(
+                              height: 280,
+                              width: double.infinity,
+                              child: AppImageViewer(
+                                imageSource: allImages[_selectedImageIndex.clamp(0, allImages.length - 1)],
+                                fit: BoxFit.cover,
+                              ),
+                            ),
+                          ),
+                          if (allImages.length > 1)
+                            Positioned(
+                              bottom: 12,
+                              right: 12,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: Colors.black.withValues(alpha: 0.75),
+                                  borderRadius: BorderRadius.circular(20),
                                 ),
-                        ),
+                                child: Text(
+                                  'Photo ${_selectedImageIndex + 1} / ${allImages.length}',
+                                  style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+                                ),
+                              ),
+                            ),
+                        ],
                       ),
+                      const SizedBox(height: 12),
+
+                      // Vignettes miniatures si plusieurs photos
+                      if (allImages.length > 1) ...[
+                        SizedBox(
+                          height: 70,
+                          child: ListView.separated(
+                            scrollDirection: Axis.horizontal,
+                            itemCount: allImages.length,
+                            separatorBuilder: (context, index) => const SizedBox(width: 10),
+                            itemBuilder: (context, index) {
+                              final isSelected = index == _selectedImageIndex;
+                              return GestureDetector(
+                                onTap: () => setState(() => _selectedImageIndex = index),
+                                child: Container(
+                                  width: 80,
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(10),
+                                    border: Border.all(
+                                      color: isSelected ? AppTheme.accentCyan : Colors.grey.shade300,
+                                      width: isSelected ? 2.5 : 1,
+                                    ),
+                                  ),
+                                  child: ClipRRect(
+                                    borderRadius: BorderRadius.circular(8),
+                                    child: AppImageViewer(
+                                      imageSource: allImages[index],
+                                      fit: BoxFit.cover,
+                                    ),
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                      ],
                       const SizedBox(height: 24),
                     ],
 
@@ -131,7 +193,7 @@ class PublicationDetailDialog extends StatelessWidget {
                       decoration: BoxDecoration(
                         color: AppTheme.accentBlue.withValues(alpha: 0.06),
                         borderRadius: BorderRadius.circular(12),
-                        border: Border(left: BorderSide(color: AppTheme.accentBlue, width: 4)),
+                        border: const Border(left: BorderSide(color: AppTheme.accentBlue, width: 4)),
                       ),
                       child: Text(
                         publication.summary,

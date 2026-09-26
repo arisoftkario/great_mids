@@ -1,6 +1,10 @@
+import 'dart:convert';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:file_picker/file_picker.dart';
 import '../../core/theme/app_theme.dart';
 import '../../models/publication_model.dart';
+import '../common/app_image_viewer.dart';
 
 class PublicationFormDialog extends StatefulWidget {
   final Publication? publication;
@@ -18,10 +22,12 @@ class _PublicationFormDialogState extends State<PublicationFormDialog> {
   late TextEditingController _contentController;
   late TextEditingController _authorController;
   late TextEditingController _tagsController;
-  late TextEditingController _imageUrlController;
+  late TextEditingController _urlInputController;
 
   String _selectedCategory = 'Actualité';
   bool _isPublished = true;
+  List<String> _images = [];
+  bool _isLoadingImages = false;
 
   final List<String> _categories = [
     'Actualité',
@@ -41,9 +47,10 @@ class _PublicationFormDialogState extends State<PublicationFormDialog> {
     _contentController = TextEditingController(text: p?.content ?? '');
     _authorController = TextEditingController(text: p?.author ?? 'Direction GM GROUP');
     _tagsController = TextEditingController(text: p?.tags.join(', ') ?? 'Formation, Emploi');
-    _imageUrlController = TextEditingController(text: p?.imageUrl ?? '');
+    _urlInputController = TextEditingController();
     _selectedCategory = p?.category ?? 'Actualité';
     _isPublished = p?.isPublished ?? true;
+    _images = List<String>.from(p?.allImages ?? []);
   }
 
   @override
@@ -53,8 +60,73 @@ class _PublicationFormDialogState extends State<PublicationFormDialog> {
     _contentController.dispose();
     _authorController.dispose();
     _tagsController.dispose();
-    _imageUrlController.dispose();
+    _urlInputController.dispose();
     super.dispose();
+  }
+
+  Future<void> _pickMultipleImages() async {
+    setState(() => _isLoadingImages = true);
+    try {
+      final files = await FilePickerPlatform.instance.pickFiles(
+        type: FileType.image,
+      );
+
+      if (files.isNotEmpty) {
+        final newImages = <String>[];
+        for (final file in files) {
+          try {
+            final Uint8List bytes = await file.readAsBytes();
+            if (bytes.isNotEmpty) {
+              final ext = file.name.split('.').last.toLowerCase();
+              final mimeType = ext == 'png'
+                  ? 'image/png'
+                  : (ext == 'webp' ? 'image/webp' : 'image/jpeg');
+              final base64Str = base64Encode(bytes);
+              final dataUrl = 'data:$mimeType;base64,$base64Str';
+              newImages.add(dataUrl);
+            }
+          } catch (_) {}
+        }
+        if (newImages.isNotEmpty) {
+          setState(() {
+            _images.addAll(newImages);
+          });
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erreur lors de l’importation des images: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoadingImages = false);
+    }
+  }
+
+  void _addImageFromUrl() {
+    final url = _urlInputController.text.trim();
+    if (url.isNotEmpty) {
+      setState(() {
+        _images.add(url);
+        _urlInputController.clear();
+      });
+    }
+  }
+
+  void _removeImage(int index) {
+    setState(() {
+      _images.removeAt(index);
+    });
+  }
+
+  void _setAsPrimaryImage(int index) {
+    if (index > 0 && index < _images.length) {
+      setState(() {
+        final img = _images.removeAt(index);
+        _images.insert(0, img);
+      });
+    }
   }
 
   void _save() {
@@ -72,7 +144,8 @@ class _PublicationFormDialogState extends State<PublicationFormDialog> {
         summary: _summaryController.text.trim(),
         content: _contentController.text.trim(),
         author: _authorController.text.trim(),
-        imageUrl: _imageUrlController.text.trim().isEmpty ? null : _imageUrlController.text.trim(),
+        imageUrl: _images.isNotEmpty ? _images.first : null,
+        images: _images,
         publishedDate: widget.publication?.publishedDate ?? DateTime.now(),
         isPublished: _isPublished,
         tags: tags,
@@ -91,7 +164,7 @@ class _PublicationFormDialogState extends State<PublicationFormDialog> {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       backgroundColor: Colors.white,
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 680, maxHeight: 800),
+        constraints: const BoxConstraints(maxWidth: 780, maxHeight: 850),
         child: Column(
           children: [
             // Header
@@ -222,6 +295,182 @@ class _PublicationFormDialogState extends State<PublicationFormDialog> {
                       ),
                       const SizedBox(height: 18),
 
+                      // SECTION IMPORTATION PHOTOS (MULTIPLE)
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(
+                            children: [
+                              const Icon(Icons.photo_library_rounded, color: AppTheme.accentBlue, size: 20),
+                              const SizedBox(width: 8),
+                              const Text(
+                                'Photos de la publication',
+                                style: TextStyle(fontWeight: FontWeight.w700, color: AppTheme.textPrimary, fontSize: 15),
+                              ),
+                              if (_images.isNotEmpty) ...[
+                                const SizedBox(width: 8),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: AppTheme.accentBlue.withValues(alpha: 0.12),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Text(
+                                    '${_images.length} photo${_images.length > 1 ? "s" : ""}',
+                                    style: const TextStyle(color: AppTheme.accentBlue, fontWeight: FontWeight.bold, fontSize: 12),
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                          ElevatedButton.icon(
+                            onPressed: _isLoadingImages ? null : _pickMultipleImages,
+                            icon: _isLoadingImages
+                                ? const SizedBox(
+                                    width: 16,
+                                    height: 16,
+                                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                  )
+                                : const Icon(Icons.add_photo_alternate_rounded, size: 18),
+                            label: const Text('Importer des photos (Multi-sélection)'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppTheme.accentCyan,
+                              foregroundColor: const Color(0xFF061A2E),
+                              elevation: 0,
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+
+                      // Galerie des images importées
+                      if (_images.isNotEmpty) ...[
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF8FAFC),
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(color: AppTheme.borderSubtle),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Glissez ou cliquez sur l\'étoile pour définir la photo de couverture principale.',
+                                style: TextStyle(fontSize: 12, color: Colors.black54),
+                              ),
+                              const SizedBox(height: 12),
+                              Wrap(
+                                spacing: 12,
+                                runSpacing: 12,
+                                children: List.generate(_images.length, (index) {
+                                  final img = _images[index];
+                                  final isPrimary = index == 0;
+                                  return Stack(
+                                    children: [
+                                      Container(
+                                        width: 120,
+                                        height: 100,
+                                        decoration: BoxDecoration(
+                                          borderRadius: BorderRadius.circular(12),
+                                          border: Border.all(
+                                            color: isPrimary ? AppTheme.accentCyan : Colors.grey.shade300,
+                                            width: isPrimary ? 2.5 : 1,
+                                          ),
+                                        ),
+                                        child: ClipRRect(
+                                          borderRadius: BorderRadius.circular(10),
+                                          child: AppImageViewer(
+                                            imageSource: img,
+                                            fit: BoxFit.cover,
+                                          ),
+                                        ),
+                                      ),
+                                      // Badge Couverture Principale
+                                      if (isPrimary)
+                                        Positioned(
+                                          top: 6,
+                                          left: 6,
+                                          child: Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                            decoration: BoxDecoration(
+                                              color: AppTheme.accentCyan,
+                                              borderRadius: BorderRadius.circular(6),
+                                            ),
+                                            child: const Text(
+                                              'Couverture',
+                                              style: TextStyle(fontSize: 9, fontWeight: FontWeight.w800, color: Color(0xFF061A2E)),
+                                            ),
+                                          ),
+                                        ),
+                                      // Boutons Actions (Supprimer & Définir principale)
+                                      Positioned(
+                                        top: 4,
+                                        right: 4,
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            if (!isPrimary)
+                                              InkWell(
+                                                onTap: () => _setAsPrimaryImage(index),
+                                                child: Container(
+                                                  padding: const EdgeInsets.all(4),
+                                                  decoration: BoxDecoration(
+                                                    color: Colors.black.withValues(alpha: 0.6),
+                                                    shape: BoxShape.circle,
+                                                  ),
+                                                  child: const Icon(Icons.star_rounded, size: 14, color: Color(0xFFE5A93C)),
+                                                ),
+                                              ),
+                                            const SizedBox(width: 4),
+                                            InkWell(
+                                              onTap: () => _removeImage(index),
+                                              child: Container(
+                                                padding: const EdgeInsets.all(4),
+                                                decoration: BoxDecoration(
+                                                  color: Colors.red.shade600,
+                                                  shape: BoxShape.circle,
+                                                ),
+                                                child: const Icon(Icons.close_rounded, size: 14, color: Colors.white),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  );
+                                }),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                      ],
+
+                      // Option d'ajout manuel par URL / Chemin Asset
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextFormField(
+                              controller: _urlInputController,
+                              decoration: const InputDecoration(
+                                hintText: 'Ou coller une URL d\'image / chemin (assets/Imag.jpeg)...',
+                                isDense: true,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          OutlinedButton.icon(
+                            onPressed: _addImageFromUrl,
+                            icon: const Icon(Icons.add_link_rounded, size: 18),
+                            label: const Text('Ajouter URL'),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 18),
+
                       // Résumé
                       const Text('Court résumé / Extrait *', style: TextStyle(fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
                       const SizedBox(height: 8),
@@ -248,41 +497,14 @@ class _PublicationFormDialogState extends State<PublicationFormDialog> {
                       ),
                       const SizedBox(height: 18),
 
-                      // Tags & Image URL
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Text('Mots-clés / Tags (séparés par des virgules)', style: TextStyle(fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
-                                const SizedBox(height: 8),
-                                TextFormField(
-                                  controller: _tagsController,
-                                  decoration: const InputDecoration(
-                                    hintText: 'Emploi, Jeunesse, Innovation',
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Text('Image Asset / URL (optionnel)', style: TextStyle(fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
-                                const SizedBox(height: 8),
-                                TextFormField(
-                                  controller: _imageUrlController,
-                                  decoration: const InputDecoration(
-                                    hintText: 'assets/Imag.jpeg ou https://...',
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
+                      // Tags
+                      const Text('Mots-clés / Tags (séparés par des virgules)', style: TextStyle(fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
+                      const SizedBox(height: 8),
+                      TextFormField(
+                        controller: _tagsController,
+                        decoration: const InputDecoration(
+                          hintText: 'Emploi, Jeunesse, Innovation',
+                        ),
                       ),
                     ],
                   ),
