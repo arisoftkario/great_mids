@@ -7,6 +7,7 @@ import '../../services/auth_service.dart';
 import '../admin/admin_dashboard_view.dart';
 import '../admin/admin_login_view.dart';
 import '../../models/offer_model.dart';
+import '../../services/pwa_install_service.dart';
 import 'widgets/offer_detail_dialog.dart';
 import 'widgets/offers_section.dart';
 import 'widgets/publications_section.dart';
@@ -86,6 +87,17 @@ class _HomePageState extends State<HomePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppTheme.lightBg,
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => PwaInstallService.promptInstall(context),
+        backgroundColor: const Color(0xFFE5A93C),
+        foregroundColor: Colors.black,
+        elevation: 6,
+        icon: const Icon(Icons.install_mobile_rounded, size: 20),
+        label: const Text(
+          'Installer l\'App',
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+        ),
+      ),
       body: SingleChildScrollView(
         controller: _scrollController,
         child: Column(
@@ -355,6 +367,19 @@ class _Navigation extends StatelessWidget {
             TextButton(onPressed: () => onNavigate('news'), child: const Text('Actualités', style: TextStyle(color: Colors.white70))),
             TextButton(onPressed: () => onNavigate('about'), child: const Text('À propos', style: TextStyle(color: Colors.white70))),
           ],
+          const SizedBox(width: 8),
+          // Install App Button
+          ElevatedButton.icon(
+            onPressed: () => PwaInstallService.promptInstall(context),
+            icon: const Icon(Icons.install_mobile_rounded, size: 16),
+            label: const Text('Installer l\'App', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFE5A93C),
+              foregroundColor: Colors.black,
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+          ),
           const SizedBox(width: 8),
           // Admin Access Button
           IconButton(
@@ -1783,6 +1808,15 @@ class _Footer extends StatelessWidget {
                 children: [
                   const _Brand(),
                   const Spacer(),
+                  TextButton.icon(
+                    onPressed: () => PwaInstallService.promptInstall(context),
+                    icon: const Icon(Icons.install_mobile_rounded, size: 16, color: Color(0xFFE5A93C)),
+                    label: const Text(
+                      'Installer l\'App',
+                      style: TextStyle(color: Color(0xFFE5A93C), fontWeight: FontWeight.w700),
+                    ),
+                  ),
+                  const SizedBox(width: 14),
                   TextButton.icon(
                     onPressed: onAdminPortal,
                     icon: const Icon(Icons.lock_outline_rounded, size: 16, color: Color(0xFF8FBCE4)),
