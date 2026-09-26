@@ -15,11 +15,13 @@ class AppDataService extends ChangeNotifier {
   List<Offer> _offers = [];
   String _whatsAppNumber = AppConstants.whatsAppNumber;
   bool _isInitialized = false;
+  DateTime? _lastSyncTime;
 
   List<Publication> get publications => List.unmodifiable(_publications);
   List<Offer> get offers => List.unmodifiable(_offers);
   String get whatsAppNumber => _whatsAppNumber;
   bool get isInitialized => _isInitialized;
+  DateTime? get lastSyncTime => _lastSyncTime;
 
   List<Publication> get publishedPublications =>
       _publications.where((p) => p.isPublished).toList()
@@ -62,12 +64,50 @@ class AppDataService extends ChangeNotifier {
       }
 
       _isInitialized = true;
+      _lastSyncTime = DateTime.now();
       notifyListeners();
     } catch (e) {
       debugPrint('Error loading AppDataService: $e');
       _publications = _getDefaultPublications();
       _offers = _getDefaultOffers();
       _isInitialized = true;
+      _lastSyncTime = DateTime.now();
+      notifyListeners();
+    }
+  }
+
+  /// Force la synchronisation et la sauvegarde globale des données
+  Future<void> syncData() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.reload();
+
+      // WhatsApp Number
+      _whatsAppNumber = prefs.getString(_whatsAppKey) ?? AppConstants.whatsAppNumber;
+
+      // Publications
+      final pubJson = prefs.getString(_publicationsKey);
+      if (pubJson != null && pubJson.isNotEmpty) {
+        final List<dynamic> decoded = jsonDecode(pubJson);
+        _publications = decoded.map((item) => Publication.fromJson(item)).toList();
+      }
+
+      // Offers
+      final offerJson = prefs.getString(_offersKey);
+      if (offerJson != null && offerJson.isNotEmpty) {
+        final List<dynamic> decoded = jsonDecode(offerJson);
+        _offers = decoded.map((item) => Offer.fromJson(item)).toList();
+      }
+
+      // Sauvegarde explicite pour persistance maximale
+      await _savePublications();
+      await _saveOffers();
+
+      _lastSyncTime = DateTime.now();
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Error during syncData: $e');
+      _lastSyncTime = DateTime.now();
       notifyListeners();
     }
   }

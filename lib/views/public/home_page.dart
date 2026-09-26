@@ -415,6 +415,28 @@ class _Navigation extends StatelessWidget {
               );
             },
           ),
+          // Sync / Refresh Button
+          IconButton(
+            onPressed: () async {
+              await AppDataService().syncData();
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('✓ Contenus et offres synchronisés !'),
+                    duration: Duration(seconds: 2),
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                );
+              }
+            },
+            tooltip: 'Synchroniser / Actualiser les données',
+            style: IconButton.styleFrom(
+              backgroundColor: Colors.white.withValues(alpha: 0.08),
+              foregroundColor: Colors.white70,
+            ),
+            icon: const Icon(Icons.sync_rounded, size: 20),
+          ),
+          const SizedBox(width: 6),
           // Admin Access Button
           IconButton(
             onPressed: onAdminPortal,

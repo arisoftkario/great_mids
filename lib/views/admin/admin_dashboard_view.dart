@@ -22,6 +22,17 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
   String _filterPubCategory = 'Tous';
   String _filterOfferDept = 'Tous';
   String _filterOfferType = 'Tous';
+  bool _isSyncing = false;
+
+  Future<void> _syncAllData() async {
+    setState(() => _isSyncing = true);
+    await AppDataService().syncData();
+    await Future.delayed(const Duration(milliseconds: 500));
+    if (mounted) {
+      setState(() => _isSyncing = false);
+      _showToast('✓ Données et contenus synchronisés avec succès sur le site !');
+    }
+  }
 
   @override
   void dispose() {
@@ -205,6 +216,30 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
             ],
           ),
           const Spacer(),
+          // Bouton Synchroniser les mises à jour
+          FilledButton.icon(
+            onPressed: _isSyncing ? null : _syncAllData,
+            icon: _isSyncing
+                ? const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF061A2E)),
+                  )
+                : const Icon(Icons.sync_rounded, size: 18),
+            label: Text(
+              _isSyncing
+                  ? 'Synchronisation...'
+                  : (isDesktop ? 'Synchroniser les mises à jour' : 'Synchroniser'),
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+            style: FilledButton.styleFrom(
+              backgroundColor: const Color(0xFF59D6B6),
+              foregroundColor: const Color(0xFF061A2E),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+          ),
+          const SizedBox(width: 12),
           OutlinedButton.icon(
             onPressed: () => Navigator.of(context).pop(),
             icon: const Icon(Icons.open_in_new_rounded, size: 16),
